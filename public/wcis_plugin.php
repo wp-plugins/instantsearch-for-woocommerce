@@ -14,7 +14,8 @@
  * @author  InstantSearchPlus <support@instantsearchplus.com>
  */
 class WCISPlugin {      
-    const SERVER_URL = 'http://woo.instantsearchplus.com/';
+//     const SERVER_URL = 'http://woo.instantsearchplus.com/';
+	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
 	const VERSION = '1.0.0';
 	
@@ -489,7 +490,10 @@ class WCISPlugin {
         $all_products = $products['products'];
         $product_chunks = array_chunk($all_products, $batch_size);
         $total_batches = count($product_chunks);
-        $batch_number = 1;
+        if ($total_batches == 0)
+        	$batch_number = 0;
+        else
+        	$batch_number = 1;
         
         $is_request_failed = false; 
 
