@@ -9,7 +9,7 @@
  * Plugin Name:       WooCommerce InstantSearch Plugin
  * Plugin URI:        www.instantsearchplus.com 
  * Description:       Best search plugin for woo commerce
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            InstantSearchPlus
  * Author URI:        www.instantsearchplus.com/plugin
  * Text Domain:       plugin-name-locale

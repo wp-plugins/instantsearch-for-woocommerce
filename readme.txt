@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead
 Requires at least: 3.3
 Tested up to: 3.8
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,7 +13,7 @@ Boost conversion with fast, search as-you-type product suggestions. Find out wha
 == Description ==
 Why have visitors wait for search results when you can engage them right at the search box, before they hit 'Enter'? InstantSearch+ for WooCommerce triples visitor conversion, optimizes search, and offers promotions through state-of-the-art contextual suggestions dropdown. Since suggestions are lightning fast, accurate, and contextual - visitors find exactly what they want - faster.
 
-As your visitors start typing the first character in your WooCommerce search box, they get personalized, relevant product suggestions, and search suggestions in the dropdown box. The clear, concise suggestions attract visitor attention to products that match what they are looking for based on your WooCommerce store catalog, product promotions, popular searches, and previous searches in your store. Once a visitor selects a product from the list, she will get immediately to that page, bypassing the search results page. Otherwise, if a visitor selects a search suggestion from the list, it will seamlessly invoke your store’s search engine with the correct search term. The suggestion list quickly changes as user type more characters until they select what they were looking for. With InstantSearch+ AutoComplete you can engage your visitors straight at the search box, before they even hit “Enter”!
+As your visitors start typing the first character in your WooCommerce search box, they get personalized, relevant product suggestions, and search suggestions in the dropdown box. The clear, concise suggestions attract visitor attention to products that match what they are looking for based on your WooCommerce store catalog, product promotions, popular searches, and previous searches in your store. Once a visitor selects a product from the list, she will get immediately to that page, bypassing the search results page. Otherwise, if a visitor selects a search suggestion from the list, it will seamlessly invoke your store's search engine with the correct search term. The suggestion list quickly changes as user type more characters until they select what they were looking for. With InstantSearch+ AutoComplete you can engage your visitors straight at the search box, before they even hit "Enter"!
 
 Play with our demo site at http://woocommerce.instantsearchplus.com
 To learn more please visit http://www.instantsearchplus.com
@@ -43,7 +43,7 @@ To learn more please visit http://www.instantsearchplus.com
 
 = Seamless Integration with Your WooCommerce Store =
 * 2-minute installation
-* 100% pure additive Javascript and CSS goodness – does not break or replace your store’s original functionality or built-in search
+* 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
 * Customizable look and feel to fit your store frontend
 * Desktop, tablet and mobile theme supported
 
@@ -84,7 +84,11 @@ Not yet.  It's in the makes.
 
 == Changelog ==
 
-= 1.0.0
+= 1.0.1 =
+* Server update
+* Fix - No products on first fetch
+
+= 1.0.0 =
 * First version!
 
 == Updates ==
