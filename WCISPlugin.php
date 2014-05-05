@@ -6,12 +6,12 @@
  * @copyright 2014 InstantSearchPlus
  *
  * @wordpress-plugin
- * Plugin Name:       WooCommerce InstantSearch Plugin
+ * Plugin Name:       InstantSearch+ for WooCommerce
  * Plugin URI:        www.instantsearchplus.com 
- * Description:       Best search plugin for woo commerce
- * Version:           1.0.1
- * Author:            InstantSearchPlus
- * Author URI:        www.instantsearchplus.com/plugin
+ * Description:       Best search plugin for WooCommerce
+ * Version:           1.0.2
+ * Author:            Fast Simon Inc
+ * Author URI:        www.instantsearchplus.com
  * Text Domain:       plugin-name-locale
  * License:           GPL-2.0+
  * Domain Path:       /languages
