@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.1';
+	const VERSION = '1.0.2';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -62,7 +62,6 @@ class WCISPlugin {
 		// Activate plugin when new blog is added
         add_action( 'wpmu_new_blog', array( $this, 'activate_new_site' ) );
         
-        //add_action( 'wp_insert_post', array( $this, 'on_product_insert' ) );
         add_action( 'publish_post', array( $this, 'on_product_update' ) );
         add_action( 'save_post', array( $this, 'on_product_update' ) );
         add_action('trashed_post', array( $this, 'on_product_delete' ) );
@@ -208,6 +207,18 @@ class WCISPlugin {
 		if ( __FILE__ != WP_UNINSTALL_PLUGIN )
 			return;
 	
+		$url = self::SERVER_URL . 'wc_update_site_state';
+		
+		$args = array(
+				'body' => array('site' => get_option('siteurl'),
+						'site_id' => get_option( 'wcis_site_id'),
+						'authentication_key' => get_option('authentication_key'),
+						'email' => get_option( 'admin_email'),
+						'site_status' => 'uninstall' )
+		);
+		
+		$resp = wp_remote_post( $url, $args );
+		
 		// deleting the database
 		delete_option('wcis_site_id');
 		delete_option('wcis_batch_size');
@@ -218,6 +229,7 @@ class WCISPlugin {
 		delete_option('is_out_of_sync_all_products');
 		delete_option('is_out_of_sync_product');
 		delete_option('retries_limit_counter');
+		
 	}
 	
 	/**
@@ -246,7 +258,7 @@ class WCISPlugin {
 	private static function single_activate() {
             $url = self::SERVER_URL . 'wc_install';
             $args = array(
-                 'body' => array( 'site' => get_option('siteurl'), 'email' => get_option( 'admin_email' )),
+                 'body' => array( 'site' => get_option('siteurl'), 'email' => get_option( 'admin_email' ), 'product_count' => wp_count_posts('product')->publish),
             );
             
             $resp = wp_remote_post( $url, $args );
@@ -261,6 +273,9 @@ class WCISPlugin {
             		update_option('is_out_of_sync_all_products', false);
             	if (get_option('is_out_of_sync_product'))
             		delete_option('is_out_of_sync_product');
+            	
+            	$err_msg = "install req returned with an error code: " . $resp['response']['code'] . ", is_wp_error: " . is_wp_error($resp); 
+            	self::send_error_report($err_msg);
 
             } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
@@ -367,6 +382,20 @@ class WCISPlugin {
             $send_products = array('total_pages'=>$total_pages, "total_products"=>$total, 'products'=>$product_array);
             self::send_products($send_products);
             
+        } else {        	
+        	// alternative way  
+        	try{
+	        	include_once( ABSPATH . 'wp-admin/includes/plugin.php' ); 
+	        	if (is_plugin_active( 'woocommerce/woocommerce.php'))
+	        		$is_woo = 'true';
+	        	else 
+	        		$is_woo = 'false';
+        	} catch (Exception $e){
+        		$is_woo = 'false (Exception)';
+        	}
+        	
+        	$err_msg = "can't find active plugin of woocommerce, alternative check: " . $is_woo;
+        	self::send_error_report($err_msg);
         }
     }
     
@@ -452,8 +481,8 @@ class WCISPlugin {
     
     public static function on_product_update($post_id )
     {    	
-        $post = get_post( $post_id );  
-        if ( 'product' !=  $post->post_type){// or  "publish" != $post->post_status ) {
+    	$post = get_post( $post_id );
+        if ( 'product' !=  $post->post_type || get_post_status($post_id) == 'trash'){// or  "publish" != $post->post_status ) {
             return;
         }
 
@@ -529,6 +558,11 @@ class WCISPlugin {
         	delete_option('retries_limit_counter');
         }
         //$resp = wp_remote_get( $url, $args );
+        
+        if ($total_batches == 0){
+        	$err_msg = "no products to send, count(product_chunks) is 0";
+        	self::send_error_report($err_msg);
+        }
     }
     
     private static function send_categories($categories)
@@ -675,7 +709,10 @@ class WCISPlugin {
 	function process_instantsearchplus_request($req){
 		if (array_key_exists('instantsearchplus', $req->query_vars)){
 			if ($req->query_vars['instantsearchplus'] == 'version'){
-				
+				if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) )
+					$woocommerce_exists = true;
+				else 
+					$woocommerce_exists = false;
 				try {
 					if ( ! function_exists( 'get_plugins' ) )
 						require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
@@ -683,6 +720,8 @@ class WCISPlugin {
 					$plugin_file = 'woocommerce.php';
 					if ( isset( $plugin_folder[$plugin_file]['Version'] ) )
 						$wooVer = $plugin_folder[$plugin_file]['Version'];
+					else
+						$wooVer = 'NULL';
 				} catch (Exception $e) {
 					$wooVer = 'Error - could not get WooCommerce version';
 				}
@@ -695,7 +734,8 @@ class WCISPlugin {
 						'email'					=> get_option('admin_email'),
 						'num_of_products'		=> wp_count_posts('product')->publish,
 						'store_id'				=> get_current_blog_id(),
-						'req_status'			=> 'OK'
+						'req_status'			=> 'OK',
+						'woocommerce_exists'	=> $woocommerce_exists
 				);
 				exit(json_encode($response));
 				
@@ -775,6 +815,19 @@ class WCISPlugin {
 				update_option('is_out_of_sync_product', $products_array);
 			}	
 		}				
+	}
+	
+	function send_error_report($str){
+		$url = self::SERVER_URL . 'wc_error_log';
+		
+		$args = array(
+				'body' => array( 'site' => get_option('siteurl'),
+						'site_id' => get_option( 'wcis_site_id' ),
+						'authentication_key' => get_option('authentication_key'),
+						'err_desc' => $str),
+		);
+		
+		$resp = wp_remote_post( $url, $args );
 	}
 	
 	/*
