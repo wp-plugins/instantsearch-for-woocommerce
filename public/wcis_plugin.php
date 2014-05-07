@@ -278,7 +278,7 @@ class WCISPlugin {
             	if (get_option('is_out_of_sync_product'))
             		delete_option('is_out_of_sync_product');
             	
-            	$err_msg = "install req returned with an error code: " . $resp['response']['code'] . ", is_wp_error: " . is_wp_error($resp); 
+            	$err_msg = "install req returned with an error"; 
             	self::send_error_report($err_msg);
 
             } else {	// $resp['response']['code'] == 200
