@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.3';
+	const VERSION = '1.0.4';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -278,7 +278,7 @@ class WCISPlugin {
             	if (get_option('is_out_of_sync_product'))
             		delete_option('is_out_of_sync_product');
             	
-            	$err_msg = "install req returned with an error code: " . $resp['response']['code'] . ", is_wp_error: " . is_wp_error($resp); 
+            	$err_msg = "install req returned with an error code"; 
             	self::send_error_report($err_msg);
 
             } else {	// $resp['response']['code'] == 200
@@ -363,7 +363,7 @@ class WCISPlugin {
 			'post_type'   => 'product',
 			'post_status' => 'publish',
 			//'post_parent' => 0,
-            'posts_per_page' => 250, 
+            'posts_per_page' => get_option( 'wcis_batch_size' ), 
 			'meta_query' => array(),
             'paged' => $page,
 		);
@@ -380,9 +380,9 @@ class WCISPlugin {
         if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
             $product_array = array();
             $loop = self::query_products();
-            $page        = $loop->get( 'paged' );
-			$total       = $loop->found_posts;
-			$total_pages = $loop->max_num_pages;
+            $page        = $loop->get( 'paged' );	// batch number
+			$total       = $loop->found_posts;		// total number of products
+			$total_pages = $loop->max_num_pages;	// total number of batches
             global $blog_id;
             
             try {
@@ -395,27 +395,28 @@ class WCISPlugin {
 	                    $product_array[] = $product;
 	                }
 	                
+	                $send_products = array(
+	                		'total_pages'=>$total_pages, 
+	                		'total_products'=>$total, 
+	                		'current_page' => $page, 
+	                		'products'=>$product_array);
+	                
+	                self::send_products_batch($send_products);
+	                
+	                // clearing array
+	                unset($product_array);	
+	                $product_array = array();
+	                unset($send_products);
+	                
 	                $page = $page + 1;
 	                $loop = self::query_products($page);
 	            }
 	           
-	            $send_products = array('total_pages'=>$total_pages, "total_products"=>$total, 'products'=>$product_array);
             } catch (Exception $e) {
             	$err_msg = "after install from push_wc_products, msg: " . $e->getMessage();
             	self::send_error_report($err_msg);
             }
-            
-            $err_msg = "Update: is about to send products";
-            self::send_error_report($err_msg);
-            
-            try {
-            	self::send_products($send_products);
-            } catch (Exception $e) {
-            	$err_msg = "after install in send_products, msg: " . $e->getMessage();
-            	self::send_error_report($err_msg);
-            }
-            
-            
+                        
         } else {        	
         	// alternative way  
         	try{
@@ -545,64 +546,106 @@ class WCISPlugin {
         self::send_product_update($post_id, $action);
     }
     
-    private static function send_products($products)
-    {
-        $batch_size =  get_option( 'wcis_batch_size' );
-        $total_products = $products['total_products'];
-        $total_pages = $products['total_pages'];
-        $all_products = $products['products'];
-        $product_chunks = array_chunk($all_products, $batch_size);
-        $total_batches = count($product_chunks);
-        if ($total_batches == 0)
-        	$batch_number = 0;
-        else
-        	$batch_number = 1;
-        
-        $is_request_failed = false; 
-
-        foreach ($product_chunks as $chunk) 
-        {
-        	try {
-            	$json_products = json_encode($chunk);
-        	} catch (Exception $e) {
-            	$err_msg = "send_products exception raised by json_encode, msg: " . $e->getMessage();
-            	self::send_error_report($err_msg);
-            }
-            $url = self::SERVER_URL . 'wc_install_products';
-        
-            $args = array(
-                 		'body' => array( 'site' => get_option('siteurl'), 
-                 		'site_id' => get_option( 'wcis_site_id' ), 
-                 		'products' => $json_products, 
-                 		'total_batches' => $total_batches, 
-            			'wcis_batch_size' => get_option( 'wcis_batch_size' ), 
-                 		'authentication_key' => get_option('authentication_key'), 
-                 		'total_products' => $total_products,
-            			'batch_number' => $batch_number,
-                 		'total_pages' => $total_pages)
-            );
-            $resp = wp_remote_post( $url, $args );
-            $batch_number++;
-            
-            if (is_wp_error($resp) || $resp['response']['code'] != 200)
-            	$is_request_failed = true;
-        }
-        if ($is_request_failed){	// on failure
-        	update_option('is_out_of_sync', true);
-        	update_option('is_out_of_sync_all_products', true);
-        } else {					// on success
-        	update_option('is_out_of_sync', false);
-        	update_option('is_out_of_sync_all_products', false);
-        	delete_option('is_out_of_sync_product');
-        	delete_option('retries_limit_counter');
-        }
-        //$resp = wp_remote_get( $url, $args );
-        
-        if ($total_batches == 0){
-        	$err_msg = "no products to send, count(product_chunks) is 0";
-        	self::send_error_report($err_msg);
-        }
+    private static function send_products_batch($products){
+    	$total_products 	= $products['total_products'];
+    	$total_pages 		= $products['total_pages'];
+    	$product_chunks 	= $products['products'];   	
+    	if ($total_products == 0)
+    		$batch_number = 0;
+    	else
+    		$batch_number = $products['current_page'];
+    	
+    	$json_products = json_encode($product_chunks);
+    	
+    	$url = self::SERVER_URL . 'wc_install_products';
+    	$args = array(
+    			'body' => array( 
+    					'site' => get_option('siteurl'),
+    					'site_id' => get_option( 'wcis_site_id' ),
+    					'products' => $json_products,
+    					'total_batches' => $total_pages,
+    					'wcis_batch_size' => get_option( 'wcis_batch_size' ),
+    					'authentication_key' => get_option('authentication_key'),
+    					'total_products' => $total_products,
+    					'batch_number' => $batch_number)
+    	);
+    	
+    	$resp = wp_remote_post( $url, $args );
+    	
+    	if (is_wp_error($resp) || $resp['response']['code'] != 200){
+    		update_option('is_out_of_sync', true);
+    		update_option('is_out_of_sync_all_products', true);
+    	} else {
+    		update_option('is_out_of_sync', false);
+    		update_option('is_out_of_sync_all_products', false);
+    		delete_option('is_out_of_sync_product');
+    		delete_option('retries_limit_counter');
+    	}
+    	
+    	if ($total_products == 0){
+    		$err_msg = "no products to send, count(product_chunks) is 0";
+    		self::send_error_report($err_msg);
+    	}
     }
+    
+//     private static function send_products($products)
+//     {
+//         $batch_size =  get_option( 'wcis_batch_size' );
+//         $total_products = $products['total_products'];
+//         $total_pages = $products['total_pages'];
+//         $all_products = $products['products'];
+//         $product_chunks = array_chunk($all_products, $batch_size);
+//         $total_batches = count($product_chunks);
+//         if ($total_batches == 0)
+//         	$batch_number = 0;
+//         else
+//         	$batch_number = 1;
+        
+//         $is_request_failed = false; 
+
+//         foreach ($product_chunks as $chunk) 
+//         {
+//         	try {
+//             	$json_products = json_encode($chunk);
+//         	} catch (Exception $e) {
+//             	$err_msg = "send_products exception raised by json_encode, msg: " . $e->getMessage();
+//             	self::send_error_report($err_msg);
+//             }
+//             $url = self::SERVER_URL . 'wc_install_products';
+        
+//             $args = array(
+//                  		'body' => array( 'site' => get_option('siteurl'), 
+//                  		'site_id' => get_option( 'wcis_site_id' ), 
+//                  		'products' => $json_products, 
+//                  		'total_batches' => $total_batches, 
+//             			'wcis_batch_size' => get_option( 'wcis_batch_size' ), 
+//                  		'authentication_key' => get_option('authentication_key'), 
+//                  		'total_products' => $total_products,
+//             			'batch_number' => $batch_number,
+//                  		'total_pages' => $total_pages)
+//             );
+//             $resp = wp_remote_post( $url, $args );
+//             $batch_number++;
+            
+//             if (is_wp_error($resp) || $resp['response']['code'] != 200)
+//             	$is_request_failed = true;
+//         }
+//         if ($is_request_failed){	// on failure
+//         	update_option('is_out_of_sync', true);
+//         	update_option('is_out_of_sync_all_products', true);
+//         } else {					// on success
+//         	update_option('is_out_of_sync', false);
+//         	update_option('is_out_of_sync_all_products', false);
+//         	delete_option('is_out_of_sync_product');
+//         	delete_option('retries_limit_counter');
+//         }
+//         //$resp = wp_remote_get( $url, $args );
+        
+//         if ($total_batches == 0){
+//         	$err_msg = "no products to send, count(product_chunks) is 0";
+//         	self::send_error_report($err_msg);
+//         }
+//     }
     
     private static function send_categories($categories)
     {
@@ -612,7 +655,7 @@ class WCISPlugin {
     {
         $product = self::get_product_from_post($post_id);
         $product_update = array('topic'=>$action, 'product'=>$product);
-        $json_product_update = json_encode($product_update);   
+        $json_product_update = json_encode($product_update); 
         $url = self::SERVER_URL . 'wc_update_products';
         
         $is_out_of_sync = get_option('is_out_of_sync');
