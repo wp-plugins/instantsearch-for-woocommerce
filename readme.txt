@@ -11,9 +11,9 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Boost conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
-Why have visitors wait for search results when you can engage them right at the search box, before they hit 'Enter'? InstantSearch+ for WooCommerce triples visitor conversion, optimizes search, and offers promotions through state-of-the-art contextual suggestions dropdown. Since suggestions are lightning fast, accurate, and contextual - visitors find exactly what they want - faster.
-
-As your visitors start typing the first character in your WooCommerce search box, they get personalized, relevant product suggestions, and search suggestions in the dropdown box. The clear, concise suggestions attract visitor attention to products that match what they are looking for based on your WooCommerce store catalog, product promotions, popular searches, and previous searches in your store. Once a visitor selects a product from the list, she will get immediately to that page, bypassing the search results page. Otherwise, if a visitor selects a search suggestion from the list, it will seamlessly invoke your store's search engine with the correct search term. The suggestion list quickly changes as user type more characters until they select what they were looking for. With InstantSearch+ AutoComplete you can engage your visitors straight at the search box, before they even hit "Enter"!
+The fastest, most advanced, cloud-based instant search to your WooCommerce store, see your conversion rates go up-and-to-the-right. 
+Search-as-you-type product names, descriptions, images, and prices from the first typed character. 
+Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.
 
 Play with our demo site at http://woocommerce.instantsearchplus.com
 To learn more please visit http://www.instantsearchplus.com
