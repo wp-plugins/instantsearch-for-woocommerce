@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,8 +21,8 @@ To learn more please visit http://www.instantsearchplus.com
 
 ## Features
 = Lightning-Fast Instant Search for WooCommerce Stores =
-* *100% Cloud-based, CDN-backed*, product search results with the lowest possible latency
-* Search-as-you-type product names, images, and prices from the *first typed character*
+* **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
+* Search-as-you-type product names, images, and prices from the **first typed character**
 * In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
 
 = Product Instant Search & Promotions =
@@ -84,7 +84,7 @@ Not yet.  It's in the makes.
 
 == Changelog ==
 
-= 1.0.2 =
+= 1.0.3 =
 * Additional log
 * Fix - bug fixes
 
