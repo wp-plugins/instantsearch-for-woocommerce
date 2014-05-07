@@ -16,13 +16,11 @@ Search-as-you-type product names, descriptions, images, and prices from the firs
 Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.
 
 
+= Play with our demo site at http://woocommerce.instantsearchplus.com =
+= To learn more please visit http://www.instantsearchplus.com =
 
 
-Play with our demo site at http://woocommerce.instantsearchplus.com
-To learn more please visit http://www.instantsearchplus.com
-
-
-## Features
+= Features: =
 = Lightning-Fast Instant Search for WooCommerce Stores =
 * *100% Cloud-based, CDN-backed*, product search results with the lowest possible latency
 * Search-as-you-type product names, images, and prices from the *first typed character*
