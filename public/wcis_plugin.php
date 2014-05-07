@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.2';
+	const VERSION = '1.0.3';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -159,30 +159,31 @@ class WCISPlugin {
 	 *                                       deactivated on an individual blog.
 	 */
 	public static function deactivate( $network_wide ) {
-
-            if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-
-                    if ( $network_wide ) {
-
-                            // Get all blog ids
-                            $blog_ids = self::get_blog_ids();
-
-                            foreach ( $blog_ids as $blog_id ) {
-
-                                    switch_to_blog( $blog_id );
-                                    self::single_deactivate();
-
-                            }
-
-                            restore_current_blog();
-
-                    } else {
-                            self::single_deactivate();
-                    }
-
-            } else {
-                    self::single_deactivate();
-            }
+	
+		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
+		
+			if ( $network_wide ) {
+		
+				// Get all blog ids
+				$blog_ids = self::get_blog_ids();
+		
+				foreach ( $blog_ids as $blog_id ) {
+		
+					switch_to_blog( $blog_id );
+					self::single_deactivate();
+		
+				}
+		
+				restore_current_blog();
+		
+			} else {
+				self::single_deactivate();
+			}
+		
+		} else {
+			self::single_deactivate();
+		}	
+        
 	}
 
 	/**
@@ -195,17 +196,17 @@ class WCISPlugin {
 	 *                                       WPMU is disabled or plugin is
 	 *                                       deactivated on an individual blog.
 	 */
-	public static function uninstall( $network_wide ) {
+	public static function uninstall( $network_wide ) {		
 		if ( ! current_user_can( 'activate_plugins' ) )
 			return;
-		
+
 		// TODO: verifie
 // 		check_admin_referer();
 	
 		// Important: Check if the file is the one
 		// that was registered during the uninstall hook.
-		if ( __FILE__ != WP_UNINSTALL_PLUGIN )
-			return;
+// 		if ( __FILE__ != WP_UNINSTALL_PLUGIN )
+// 			return;
 	
 		$url = self::SERVER_URL . 'wc_update_site_state';
 		
@@ -258,7 +259,10 @@ class WCISPlugin {
 	private static function single_activate() {
             $url = self::SERVER_URL . 'wc_install';
             $args = array(
-                 'body' => array( 'site' => get_option('siteurl'), 'email' => get_option( 'admin_email' ), 'product_count' => wp_count_posts('product')->publish),
+                 'body' => array( 'site' => get_option('siteurl'), 
+                 				  'email' => get_option( 'admin_email' ), 
+                 				  'product_count' => wp_count_posts('product')->publish,
+                 				  'php_version' => phpversion()),
             );
             
             $resp = wp_remote_post( $url, $args );
@@ -279,20 +283,35 @@ class WCISPlugin {
 
             } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
-            	$response_json = json_decode($resp['body']);
-            	$site_id = $response_json->{'site_id'};
-            	
-            	$batch_size = $response_json->{'batch_size'};
-            	update_option('wcis_site_id', $site_id);
-            	update_option('wcis_batch_size', $batch_size);
-            	$authentication_key = $response_json->{'authentication_key'};
-            	update_option('authentication_key', $authentication_key);
-            	
-            	if (get_option('is_out_of_sync_install')){
-            		update_option('is_out_of_sync_install', false);
-            		if (!get_option('is_out_of_sync_all_products'))
-            			// if all products are synced
-            			update_option('is_out_of_sync', false);
+            	try{
+	            	$response_json = json_decode($resp['body']);
+	            	if ($response_json == Null){
+	            		$err_msg = "After install json_decode returned null";
+	            		self::send_error_report($err_msg);
+	            	}
+            	} catch (Exception $e){
+            		$err_msg = "After install json_decode raised an exception, msg: " . $e->getMessage();
+            		self::send_error_report($err_msg);
+            	}
+
+            	try{
+	            	$site_id = $response_json->{'site_id'};
+	            	
+	            	$batch_size = $response_json->{'batch_size'};
+	            	update_option('wcis_site_id', $site_id);
+	            	update_option('wcis_batch_size', $batch_size);
+	            	$authentication_key = $response_json->{'authentication_key'};
+	            	update_option('authentication_key', $authentication_key);
+	            	
+	            	if (get_option('is_out_of_sync_install')){
+	            		update_option('is_out_of_sync_install', false);
+	            		if (!get_option('is_out_of_sync_all_products'))
+	            			// if all products are synced
+	            			update_option('is_out_of_sync', false);
+	            	}
+            	} catch (Exception $e){
+            		$err_msg = "After install internal exception raised msg: ". $e->getMessage();
+            		self::send_error_report($err_msg);
             	}
             	//self::build_categories();
             	self::push_wc_products();
@@ -366,21 +385,36 @@ class WCISPlugin {
 			$total_pages = $loop->max_num_pages;
             global $blog_id;
             
-            while ($page <= $total_pages)
-            {
-                while ( $loop->have_posts() ) 
-                {
-                    $loop->the_post(); 
-                    $product = self::get_product_from_post(get_the_ID());
-                    $product_array[] = $product;
-                }
-                
-                $page = $page + 1;
-                $loop = self::query_products($page);
+            try {
+	            while ($page <= $total_pages)
+	            {
+	                while ( $loop->have_posts() ) 
+	                {
+	                    $loop->the_post(); 
+	                    $product = self::get_product_from_post(get_the_ID());
+	                    $product_array[] = $product;
+	                }
+	                
+	                $page = $page + 1;
+	                $loop = self::query_products($page);
+	            }
+	           
+	            $send_products = array('total_pages'=>$total_pages, "total_products"=>$total, 'products'=>$product_array);
+            } catch (Exception $e) {
+            	$err_msg = "after install from push_wc_products, msg: " . $e->getMessage();
+            	self::send_error_report($err_msg);
             }
-           
-            $send_products = array('total_pages'=>$total_pages, "total_products"=>$total, 'products'=>$product_array);
-            self::send_products($send_products);
+            
+            $err_msg = "Update: is about to send products";
+            self::send_error_report($err_msg);
+            
+            try {
+            	self::send_products($send_products);
+            } catch (Exception $e) {
+            	$err_msg = "after install in send_products, msg: " . $e->getMessage();
+            	self::send_error_report($err_msg);
+            }
+            
             
         } else {        	
         	// alternative way  
@@ -528,7 +562,12 @@ class WCISPlugin {
 
         foreach ($product_chunks as $chunk) 
         {
-            $json_products = json_encode($chunk);   
+        	try {
+            	$json_products = json_encode($chunk);
+        	} catch (Exception $e) {
+            	$err_msg = "send_products exception raised by json_encode, msg: " . $e->getMessage();
+            	self::send_error_report($err_msg);
+            }
             $url = self::SERVER_URL . 'wc_install_products';
         
             $args = array(
