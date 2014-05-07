@@ -21,8 +21,8 @@ To learn more please visit http://www.instantsearchplus.com
 
 ## Features
 = Lightning-Fast Instant Search for WooCommerce Stores =
-* *100% Cloud-based, CDN-backed*, product search results with the lowest possible latency
-* Search-as-you-type product names, images, and prices from the *first typed character*
+* **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
+* Search-as-you-type product names, images, and prices from the **first typed character**
 * In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
 
 = Product Instant Search & Promotions =
