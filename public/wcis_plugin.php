@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.4';
+	const VERSION = '1.0.5';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -256,7 +256,7 @@ class WCISPlugin {
 	 *
 	 * @since    1.0.0
 	 */
-	private static function single_activate() {
+	private static function single_activate($is_retry = false) {
             $url = self::SERVER_URL . 'wc_install';
             $args = array(
                  'body' => array( 'site' => get_option('siteurl'), 
@@ -278,8 +278,10 @@ class WCISPlugin {
             	if (get_option('is_out_of_sync_product'))
             		delete_option('is_out_of_sync_product');
             	
-            	$err_msg = "install req returned with an error code"; 
+            	$err_msg = "install req returned with an error code, sending retry install request: " . $is_retry; 
             	self::send_error_report($err_msg);
+            	if (!$is_retry)
+            		single_activate(true);
 
             } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
@@ -289,19 +291,18 @@ class WCISPlugin {
 	            		$err_msg = "After install json_decode returned null";
 	            		self::send_error_report($err_msg);
 	            	}
-            	} catch (Exception $e){
-            		$err_msg = "After install json_decode raised an exception, msg: " . $e->getMessage();
-            		self::send_error_report($err_msg);
-            	}
 
-            	try{
 	            	$site_id = $response_json->{'site_id'};
-	            	
 	            	$batch_size = $response_json->{'batch_size'};
 	            	update_option('wcis_site_id', $site_id);
 	            	update_option('wcis_batch_size', $batch_size);
+	            	$max_num_of_batches = $response_json->{'max_num_of_batches'};
+	            	update_option('max_num_of_batches', $max_num_of_batches);
+	            	
 	            	$authentication_key = $response_json->{'authentication_key'};
 	            	update_option('authentication_key', $authentication_key);
+	            	
+	            	update_option('do_not_send_retries', true);
 	            	
 	            	if (get_option('is_out_of_sync_install')){
 	            		update_option('is_out_of_sync_install', false);
@@ -384,7 +385,9 @@ class WCISPlugin {
 			$total       = $loop->found_posts;		// total number of products
 			$total_pages = $loop->max_num_pages;	// total number of batches
             global $blog_id;
-            
+            $max_num_of_batches = get_option('max_num_of_batches');
+            $is_additional_fetch_required = false;
+
             try {
 	            while ($page <= $total_pages)
 	            {
@@ -395,11 +398,17 @@ class WCISPlugin {
 	                    $product_array[] = $product;
 	                }
 	                
+	                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
+	                	// need to schedule request from server side to send the rest of the batches after activation ends
+	                	$is_additional_fetch_required = true;
+	                
 	                $send_products = array(
-	                		'total_pages'=>$total_pages, 
-	                		'total_products'=>$total, 
-	                		'current_page' => $page, 
-	                		'products'=>$product_array);
+	                		'total_pages' 				   	=> $total_pages, 
+	                		'total_products'				=> $total, 
+	                		'current_page' 					=> $page, 
+	                		'products'						=> $product_array,
+	                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
+	                );
 	                
 	                self::send_products_batch($send_products);
 	                
@@ -409,11 +418,16 @@ class WCISPlugin {
 	                unset($send_products);
 	                
 	                $page = $page + 1;
+	                
+	                // too many products on activation, will get the rest of the products, by server request, after the activation is done
+	                if ($is_additional_fetch_required)
+	                	break;
+	                
 	                $loop = self::query_products($page);
 	            }
 	           
             } catch (Exception $e) {
-            	$err_msg = "after install from push_wc_products, msg: " . $e->getMessage();
+            	$err_msg = "wc_install_products raised exception, msg: " . $e->getMessage();
             	self::send_error_report($err_msg);
             }
                         
@@ -433,6 +447,30 @@ class WCISPlugin {
         	self::send_error_report($err_msg);
         }
     }
+    
+    private static function puch_wc_batch($batch_num){
+    	$loop = self::query_products($batch_num);
+    	$product_array = array();
+    	$total       = $loop->found_posts;		// total number of products
+    	$total_pages = $loop->max_num_pages;	// total number of batches
+    	while ( $loop->have_posts() )
+    	{
+    		$loop->the_post();
+    		$product = self::get_product_from_post(get_the_ID());
+    		$product_array[] = $product;
+    	}
+    	
+    	$send_products = array(
+    			'total_pages' 				   	=> $total_pages,
+    			'total_products'				=> $total,
+    			'current_page' 					=> $batch_num,
+    			'products'						=> $product_array,
+    			'is_additional_fetch_required' 	=> false,
+    	);    	
+    	 
+    	self::send_products_batch($send_products);	
+    }
+    
     
     private static function get_product_from_post($post_id)
     {
@@ -547,9 +585,11 @@ class WCISPlugin {
     }
     
     private static function send_products_batch($products){
-    	$total_products 	= $products['total_products'];
-    	$total_pages 		= $products['total_pages'];
-    	$product_chunks 	= $products['products'];   	
+    	$total_products 				= $products['total_products'];
+    	$total_pages 					= $products['total_pages'];
+    	$product_chunks 				= $products['products'];   	
+    	$is_additional_fetch_required 	= $products['is_additional_fetch_required'];
+    	
     	if ($total_products == 0)
     		$batch_number = 0;
     	else
@@ -567,7 +607,9 @@ class WCISPlugin {
     					'wcis_batch_size' => get_option( 'wcis_batch_size' ),
     					'authentication_key' => get_option('authentication_key'),
     					'total_products' => $total_products,
-    					'batch_number' => $batch_number)
+    					'batch_number' => $batch_number, 
+    					'is_additional_fetch_required' => $is_additional_fetch_required,
+    			)
     	);
     	
     	$resp = wp_remote_post( $url, $args );
@@ -575,6 +617,8 @@ class WCISPlugin {
     	if (is_wp_error($resp) || $resp['response']['code'] != 200){
     		update_option('is_out_of_sync', true);
     		update_option('is_out_of_sync_all_products', true);
+    		$err_msg = "send_products_batch request failed batch: " . $batch_number;  
+    		self::send_error_report($err_msg);
     	} else {
     		update_option('is_out_of_sync', false);
     		update_option('is_out_of_sync_all_products', false);
@@ -785,6 +829,7 @@ class WCISPlugin {
 	
 	function filter_instantsearchplus_request($vars){
 		$vars[] = 'instantsearchplus';
+		$vars[] = 'instantsearchplus_parameter';
 		return $vars;
 	}
 	
@@ -839,6 +884,11 @@ class WCISPlugin {
 				delete_option('is_out_of_sync_install');
 				delete_option('is_out_of_sync_all_products');				
 				update_option('is_out_of_sync', false);				
+			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
+				$batch_num = $req->query_vars['instantsearchplus_parameter'];			
+				self::puch_wc_batch($batch_num);
+				status_header(200);
+				exit();
 			}
 		}
 	}
