@@ -281,7 +281,7 @@ class WCISPlugin {
             	$err_msg = "install req returned with an error code, sending retry install request: " . $is_retry; 
             	self::send_error_report($err_msg);
             	if (!$is_retry)
-            		single_activate(true);
+            		self::single_activate(true);
 
             } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
