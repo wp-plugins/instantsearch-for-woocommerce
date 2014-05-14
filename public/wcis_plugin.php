@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.6';
+	const VERSION = '1.0.7';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -134,23 +134,25 @@ class WCISPlugin {
 	 */
 	public static function activate( $network_wide )
 	{			
-		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-			if ( $network_wide  ) {
-				// Get all blog ids
-                $blog_ids = self::get_blog_ids();
+		self::single_activate();
+		
+// 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
+// 			if ( $network_wide  ) {
+// 				// Get all blog ids
+//                 $blog_ids = self::get_blog_ids();
 
-                foreach ( $blog_ids as $blog_id ) {
-	                switch_to_blog( $blog_id );
-	                self::single_activate();
-                }
-				restore_current_blog();
-			} else {
-            	self::single_activate();
-            }
+//                 foreach ( $blog_ids as $blog_id ) {
+// 	                switch_to_blog( $blog_id );
+// 	                self::single_activate();
+//                 }
+// 				restore_current_blog();
+// 			} else {
+//             	self::single_activate();
+//             }
 
-		} else {
-			self::single_activate();
-		}
+// 		} else {
+// 			self::single_activate();
+// 		}
 //             wp_redirect( admin_url( 'admin.php?page=WCISPlugin' ) );
 	}
 
@@ -259,11 +261,50 @@ class WCISPlugin {
 	 */
 	private static function single_activate($is_retry = false) {
             $url = self::SERVER_URL . 'wc_install';
+            
+            try{
+            // multisite data
+	            if ( function_exists( 'is_multisite' ) && is_multisite() ) {
+	            	// Get all blog ids
+	            	$blog_ids = self::get_blog_ids();
+	            	$i = 0;
+	            	foreach ( $blog_ids as $blog_id ) {
+	            		switch_to_blog( $blog_id );
+	            		$current_site_url = get_site_url( get_current_blog_id() );
+	            		$blog_details = get_blog_details($blog_id);
+	            			
+	            		$multisite_info = array(
+		                		'i' 				   			=> $i, 
+		                		'current_site_url'				=> $current_site_url, 
+		                		'blog_id' 						=> $blog_id, 
+	            				'name'							=> $blog_details->blogname,
+	            				'site_id'						=> $blog_details->site_id,
+	            				'blog_details_site_id'			=> $blog_details->blog_id,
+		                );
+	            		$multisite_array[] = $multisite_info;
+	            		$i++;            		
+	            	}
+	            	restore_current_blog();
+	            }
+	            if (function_exists( 'is_multisite' ) && is_multisite())
+	            	$is_multisite_on = true;
+	            else
+	            	$is_multisite_on = false;
+	
+	            $json_multisite = json_encode($multisite_array);
+            } catch (Exception $e){
+            	$is_multisite_on = false;
+            }
+            // end multisite
+            
             $args = array(
                  'body' => array( 'site' => get_option('siteurl'), 
                  				  'email' => get_option( 'admin_email' ), 
                  				  'product_count' => wp_count_posts('product')->publish,
-                 				  'php_version' => phpversion()),
+                 				  'blog_id' => get_current_blog_id(),
+            					  'is_multisite'	=> $is_multisite_on,
+            					  'multisite_info'	=> $json_multisite
+                 )		
             );
             
             $resp = wp_remote_post( $url, $args );
