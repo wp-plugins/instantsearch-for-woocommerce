@@ -15,8 +15,9 @@ Add the fastest, most advanced, cloud-based instant search to your WooCommerce s
 Search-as-you-type product names, descriptions, images, and prices from the first typed character. 
 Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions  make it a must-have for your eCommerce store.
 
-Play with our demo site at http://woocommerce.instantsearchplus.com
+Play with our demo site at http://woocommerce.instantsearchplus.com  
 To learn more please visit http://www.instantsearchplus.com
+[youtube http://youtu.be/GbbzkIMcXoM]
 
 
 ## Features
