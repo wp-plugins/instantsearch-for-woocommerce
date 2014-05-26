@@ -134,6 +134,8 @@ class WCISPlugin {
 	 */
 	public static function activate( $network_wide )
 	{			
+		$err_msg = "activate function triggered";
+		self::send_error_report($err_msg);
 		self::single_activate();
 		
 // 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
@@ -248,6 +250,9 @@ class WCISPlugin {
 		if ( 1 !== did_action( 'wpmu_new_blog' ) ) {
 			return;
 		}
+		
+		$err_msg = "activate_new_site triggered";
+		self::send_error_report($err_msg);
 
 		switch_to_blog( $blog_id );
 		self::single_activate();
