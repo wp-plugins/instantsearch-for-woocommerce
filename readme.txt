@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,8 +15,10 @@ Add the fastest, most advanced, cloud-based instant search to your WooCommerce s
 Search-as-you-type product names, descriptions, images, and prices from the first typed character. 
 Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions  make it a must-have for your eCommerce store.
 
-Play with our demo site at http://woocommerce.instantsearchplus.com
-To learn more please visit http://www.instantsearchplus.com
+Play with our demo site at http://woocommerce.instantsearchplus.com  
+To learn more please visit http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
+
+[youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
 
 
 ## Features
@@ -84,6 +86,10 @@ Not yet.  It's in the makes.
 
 == Changelog ==
 
+= 1.0.8 =
+* added new youtube video
+* multiple install logging
+
 = 1.0.7 =
 * additional log was added (multisite)
 
@@ -96,10 +102,6 @@ Not yet.  It's in the makes.
 
 = 1.0.4 =
 * Fix - fatal error on sending large number of products after install/activation
-
-= 1.0.3 =
-* Additional log
-* Fix - bug fixes
 
 = 1.0.1 =
 * Server update
