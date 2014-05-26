@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.7';
+	const VERSION = '1.0.8';
 	
 	const RETRIES_LIMIT = 3;
 	
