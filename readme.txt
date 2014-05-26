@@ -18,8 +18,6 @@ Fast cloud-CDN-based results, Product promotions, and personalized real-time sea
 Play with our demo site at http://woocommerce.instantsearchplus.com  
 To learn more please visit http://www.instantsearchplus.com
 
-[youtube="http://youtu.be/GbbzkIMcXoM"]
-
 
 ## Features
 = Lightning-Fast Instant Search for WooCommerce Stores =
