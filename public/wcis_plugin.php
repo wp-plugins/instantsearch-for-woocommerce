@@ -413,20 +413,23 @@ class WCISPlugin {
     private static function push_wc_products()
     {
         error_log("push products");
+        
+        $err_msg = "about to send batches...";
+        self::send_error_report($err_msg);
         /**
          * Check if WooCommerce is active
          **/
         if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-            $product_array = array();
-            $loop = self::query_products();
-            $page        = $loop->get( 'paged' );	// batch number
-			$total       = $loop->found_posts;		// total number of products
-			$total_pages = $loop->max_num_pages;	// total number of batches
-            global $blog_id;
-            $max_num_of_batches = get_option('max_num_of_batches');
-            $is_additional_fetch_required = false;
+        	try {
+	            $product_array = array();
+	            $loop = self::query_products();
+	            $page        = $loop->get( 'paged' );	// batch number
+				$total       = $loop->found_posts;		// total number of products
+				$total_pages = $loop->max_num_pages;	// total number of batches
+	            global $blog_id;
+	            $max_num_of_batches = get_option('max_num_of_batches');
+	            $is_additional_fetch_required = false;
 
-            try {
 	            while ($page <= $total_pages)
 	            {
 	                while ( $loop->have_posts() ) 
@@ -704,7 +707,7 @@ class WCISPlugin {
         self::send_product_update($post_id, $action);
     }
     
-    private static function send_products_batch($products){
+    private static function send_products_batch($products, $is_retry = false){
     	$total_products 				= $products['total_products'];
     	$total_pages 					= $products['total_pages'];
     	$product_chunks 				= $products['products'];   	
@@ -739,6 +742,8 @@ class WCISPlugin {
 //     		update_option('is_out_of_sync_all_products', true);
     		$err_msg = "send_products_batch request failed batch: " . $batch_number;  
     		self::send_error_report($err_msg);
+    		if (!$is_retry)
+    			self::send_products_batch($products, true);
     	} else {
     		update_option('is_out_of_sync', false);
     		update_option('is_out_of_sync_all_products', false);
