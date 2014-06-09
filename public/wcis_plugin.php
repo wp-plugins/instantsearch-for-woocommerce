@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.8';
+	const VERSION = '1.0.9';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -84,13 +84,16 @@ class WCISPlugin {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
             
         add_action('parse_request', array($this, 'process_instantsearchplus_request'));
-        add_filter('query_vars', array($this, 'filter_instantsearchplus_request'));
-            
-            // status change!!!
-//             add_action( 'transition_post_status', array($this, 'on_post_unpublished'), 10, 3 );    
+        add_filter('query_vars', array($this, 'filter_instantsearchplus_request'));   
 
         // cron
-        add_action( 'instantsearchplus_cron_request_event', array( $this, 'handle_cron_request' ) );
+        add_action( 'instantsearchplus_cron_request_event', array( $this, 'handle_cron_request' ) );    
+        
+        // FullText search
+        add_filter( 'posts_search', array( $this, 'posts_search_handler' ) );
+        add_action( 'pre_get_posts', array( $this, 'pre_get_posts_handler' ) );
+        add_filter( 'post_limits', array( $this, 'post_limits_handler' ) );
+        add_filter( 'the_posts', array( $this, 'the_posts_handler' ) );
         
 	}
 
@@ -172,7 +175,8 @@ class WCISPlugin {
 	public static function deactivate( $network_wide ) {		
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' );
 		delete_option('cron_product_list');
-	
+		delete_option('is_activation_triggered');
+		
 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
 		
 			if ( $network_wide ) {
@@ -266,94 +270,102 @@ class WCISPlugin {
 	 * @since    1.0.0
 	 */
 	private static function single_activate($is_retry = false) {
-            $url = self::SERVER_URL . 'wc_install';
-            
-            try{
-            // multisite data
-	            if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-	            	// Get all blog ids
-	            	$blog_ids = self::get_blog_ids();
-	            	$i = 0;
-	            	foreach ( $blog_ids as $blog_id ) {
-	            		switch_to_blog( $blog_id );
-	            		$current_site_url = get_site_url( get_current_blog_id() );
-	            		$blog_details = get_blog_details($blog_id);
+		if (get_option('is_activation_triggered'))
+			return;
+		update_option('is_activation_triggered', true);
+			
+		$url = self::SERVER_URL . 'wc_install';  
+        try{
+        // multisite data
+	    	if ( function_exists( 'is_multisite' ) && is_multisite() ) {
+	        	// Get all blog ids
+	        	$blog_ids = self::get_blog_ids();
+	        	$i = 0;
+	        	foreach ( $blog_ids as $blog_id ) {
+	            	switch_to_blog( $blog_id );
+	            	$current_site_url = get_site_url( get_current_blog_id() );
+	            	$blog_details = get_blog_details($blog_id);
 	            			
-	            		$multisite_info = array(
-		                		'i' 				   			=> $i, 
+	            	$multisite_info = array(
+		            			'i' 				   			=> $i, 
 		                		'current_site_url'				=> $current_site_url, 
 		                		'blog_id' 						=> $blog_id, 
 	            				'name'							=> $blog_details->blogname,
 	            				'site_id'						=> $blog_details->site_id,
 	            				'blog_details_site_id'			=> $blog_details->blog_id,
-		                );
-	            		$multisite_array[] = $multisite_info;
-	            		$i++;            		
-	            	}
-	            	restore_current_blog();
+		        	);
+	            	$multisite_array[] = $multisite_info;
+	           		$i++;            		
 	            }
-	            if (function_exists( 'is_multisite' ) && is_multisite())
-	            	$is_multisite_on = true;
-	            else
-	            	$is_multisite_on = false;
+	            restore_current_blog();
+			}
+	        if (function_exists( 'is_multisite' ) && is_multisite())
+	        	$is_multisite_on = true;
+	        else
+	        	$is_multisite_on = false;
 	
-	            $json_multisite = json_encode($multisite_array);
-            } catch (Exception $e){
-            	$is_multisite_on = false;
-            }
+	        $json_multisite = json_encode($multisite_array);
+		} catch (Exception $e){
+        	$is_multisite_on = false;
+		}
             // end multisite
             
-            $args = array(
-                 'body' => array( 'site' => get_option('siteurl'), 
-                 				  'email' => get_option( 'admin_email' ), 
-                 				  'product_count' => wp_count_posts('product')->publish,
-                 				  'blog_id' => get_current_blog_id(),
-            					  'is_multisite'	=> $is_multisite_on,
-            					  'multisite_info'	=> $json_multisite
-                 )		
-            );
+        $args = array(
+        	'body' => array('site' => get_option('siteurl'), 
+        				'email' => get_option( 'admin_email' ), 
+        				'product_count' => wp_count_posts('product')->publish,
+        				'store_id' => get_current_blog_id(),
+        				'is_multisite'	=> $is_multisite_on,
+        				'multisite_info'	=> $json_multisite
+        	)		
+        );
             
-            $resp = wp_remote_post( $url, $args );
+        $resp = wp_remote_post( $url, $args );
 			
-            if (is_wp_error($resp) || $resp['response']['code'] != 200)
-            {             	
-            	$err_msg = "install req returned with an error code, sending retry install request: " . $is_retry; 
-            	self::send_error_report($err_msg);
-            	if (!$is_retry)
-            		self::single_activate(true);
+        if (is_wp_error($resp) || $resp['response']['code'] != 200)
+        {             	
+        	$err_msg = "install req returned with an error code, sending retry install request: " . $is_retry;
+        	try{
+            	if (is_wp_error($resp))
+            		$err_msg = $err_msg . " - error msg: " . $resp->get_error_message();
+        	} catch (Exception $e) {}
+            	
+        	self::send_error_report($err_msg);
+       		if (!$is_retry)
+            	self::single_activate(true);
 
-            } else {	// $resp['response']['code'] == 200
+        } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
-            	try{
-	            	$response_json = json_decode($resp['body']);
-	            	if ($response_json == Null){
-	            		$err_msg = "After install json_decode returned null";
-	            		self::send_error_report($err_msg);
-	            		if (!$is_retry)
-	            			self::single_activate(true);
-	            		return;
-	            	}
+        	try{
+	        	$response_json = json_decode($resp['body']);
+	        	if ($response_json == Null){
+	            	$err_msg = "After install json_decode returned null";
+	            	self::send_error_report($err_msg);
+	            	if (!$is_retry)
+	            		self::single_activate(true);
+	            	return;
+	            }
 
-	            	$site_id = $response_json->{'site_id'};
-	            	$batch_size = $response_json->{'batch_size'};
-	            	update_option('wcis_site_id', $site_id);
-	            	update_option('wcis_batch_size', $batch_size);
-	            	$max_num_of_batches = $response_json->{'max_num_of_batches'};
-	            	update_option('max_num_of_batches', $max_num_of_batches);
+            	$site_id = $response_json->{'site_id'};
+            	$batch_size = $response_json->{'batch_size'};
+            	update_option('wcis_site_id', $site_id);
+            	update_option('wcis_batch_size', $batch_size);
+            	$max_num_of_batches = $response_json->{'max_num_of_batches'};
+            	update_option('max_num_of_batches', $max_num_of_batches);
 	            	
-	            	$authentication_key = $response_json->{'authentication_key'};
-	            	update_option('authentication_key', $authentication_key);
+            	$authentication_key = $response_json->{'authentication_key'};
+            	update_option('authentication_key', $authentication_key);
+            	
+            	// TODO: remove it
+            	update_option('do_not_send_retries', true);
 	            	
-	            	// TODO: remove it
-	            	update_option('do_not_send_retries', true);
-	            	
-            	} catch (Exception $e){
-            		$err_msg = "After install internal exception raised msg: ". $e->getMessage();
-            		self::send_error_report($err_msg);
-            	}
-            	//self::build_categories();
-            	self::push_wc_products();
+			} catch (Exception $e){
+            	$err_msg = "After install internal exception raised msg: ". $e->getMessage();
+            	self::send_error_report($err_msg);
             }
+            	//self::build_categories();
+            self::push_wc_products();
+		}
 	}
     
 	
@@ -414,8 +426,8 @@ class WCISPlugin {
     {
         error_log("push products");
         
-        $err_msg = "about to send batches...";
-        self::send_error_report($err_msg);
+//         $err_msg = "about to send batches...";
+//         self::send_error_report($err_msg);
         /**
          * Check if WooCommerce is active
          **/
@@ -561,33 +573,7 @@ class WCISPlugin {
         }catch (Exception $e){
         	$send_product['price_min'] = null;
         	$send_product['price_max'] = null;
-        }
-        
-//         print_r("post_password_required: " . post_password_required( $post_id ));
-        
-                
-//         $sellable = $product->is_purchasable();
-//         if ($product->managing_stock() && !($product->backorders_allowed())){
-//         	if (!($product->is_in_stock()) || $product->get_stock_quantity() <= 0)
-//         		$sellable = false;   		
-//         }
-//         $send_product['sellable'] = $sellable;
-        
-        	
-// 	        $variation = $product->get_available_variations();
-// 	        $variation_id = $variation[0]['variation_id'];
-// 	        $variable_product1= new WC_Product_Variation( $variation_id );
-// 	        $send_product['price_min'] = $variable_product1->get_variation_regular_price('min');
-// 	        $send_product['price_max'] = count($variation);
-
-	        
-	        // not same product as WC_Product!!!
-// 	        $variation = new WC_Product_Variation( $product->id/*, $product->get_parent()*/);
-// 	        $send_product['price_min'] = $product->get_price();
-//         	$send_product['price_max'] = $variation->get_price();
-//         	$send_product['tmp'] = serialize($variation->get_title());
-//     		echo "file: " . __FILE__ . ", function: " . __FUNCTION__ . ", line: " . __LINE__ . "action: " . $action . "<br>";
-			 
+        }		 
         
         return $send_product;
     }
@@ -900,6 +886,7 @@ class WCISPlugin {
         $script_url = 'https://acp-magento.appspot.com/js/acp-magento.js';
         $args = "?mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
+        $args = $args . "store=" . get_current_blog_id() ."&";
         if ($product)
         {
             $args .= 'product_url=' . get_permalink() .'&';
@@ -1133,7 +1120,114 @@ class WCISPlugin {
 		
 		$resp = wp_remote_post( $url, $args );
 	}
-		
+	
+	
+	// FullText search
+	function pre_get_posts_handler( $wp_query, $is_retry = false){
+		if( is_search() && $wp_query->is_main_query() && !is_admin()){
+			$query = $wp_query->query_vars;
+			$url_args = add_query_arg();
+			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false)
+				return $wp_query;
+
+			if (isset($query['s']) ) 
+				$q = $query['s'];
+			else
+				$q = get_search_query();
+			
+			if ($query['paged'] == 0)
+				$page_num = 1;
+			else 
+				$page_num = $query['paged'];
+			
+			$url = self::SERVER_URL . 'wc_search';
+			$args = array(
+					'body' => array('s' 					=> get_option('siteurl'),
+									'h' 					=> get_option('siteurl'),	
+									'UUID' 					=> get_option( 'wcis_site_id' ),
+									'q' 					=> get_search_query(),
+									'v' 					=> self::VERSION,
+									'store_id' 				=> get_current_blog_id(),
+									'p' 					=> $page_num,				// requested page number
+									'products_per_page'		=> get_option('posts_per_page')				
+					),
+					'timeout' => 20,
+			);
+			
+			$resp = wp_remote_post( $url, $args );
+			if (is_wp_error($resp) || $resp['response']['code'] != 200){				
+				$err_msg = "/wc_search request failed is_retry: " . $is_retry;
+				self::send_error_report($err_msg);
+				
+				if (!$is_retry)
+					self::pre_get_posts_handler( $wp_query, true);
+								
+			} else {				
+				$response_json = json_decode($resp['body'], true);
+
+				$product_ids = array();
+							
+				foreach ($response_json['id_list'] as $product_id)
+					$product_ids[] = $product_id;
+
+				update_option('wcis_fulltext_ids', $product_ids);
+				if ($response_json['total_results'] != 0)
+					update_option('wcis_total_results', $response_json['total_results']);
+				else
+					update_option('wcis_total_results', -1);
+			}
+					
+		}
+		return $wp_query;
+	}
+	
+	public function posts_search_handler($search){
+		if( is_search() && ! is_admin() && get_option('wcis_fulltext_ids')){
+			$search = ''; // disable WordPress search
+		}
+		return $search;	
+	}
+	
+	function post_limits_handler($limit){
+		if( is_search() && get_option('wcis_fulltext_ids'))			
+			$limit = 'LIMIT 0, ' . get_option('posts_per_page');
+		return $limit;
+	}
+	
+	function the_posts_handler($posts){
+		if (is_search() && (get_option('wcis_fulltext_ids') || get_option('wcis_total_results') == -1)){
+			
+			global $wp_query;			
+			$total_results = get_option('wcis_total_results');	
+			if ($total_results == -1)
+				$total_results = 0;
+			$wp_query->found_posts = $total_results;			
+			$wp_query->max_num_pages = ceil($total_results / get_option('posts_per_page'));
+			$wp_query->query_vars['post_type'] = 'product';
+			
+			$fulltext_ids = get_option('wcis_fulltext_ids');
+
+// 			if (count($fulltext_ids) <= 0){
+// 				delete_option('wcis_fulltext_ids');
+// 				delete_option('wcis_total_results');
+// 				return $posts;
+// 			}
+			
+			unset($posts);
+			$posts = array();
+			if ($total_results > 0){
+				foreach ($fulltext_ids as $product_id){
+					$post = get_post($product_id);
+					$posts[] = $post;
+				}
+			}
+		}
+
+		delete_option('wcis_fulltext_ids');
+		delete_option('wcis_total_results');
+		return $posts;
+	}	
+	// FullText search end
 		
 }
 ?>
