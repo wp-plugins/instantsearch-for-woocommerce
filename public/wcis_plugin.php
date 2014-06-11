@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.9';
+	const VERSION = '1.0.10';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -424,78 +424,90 @@ class WCISPlugin {
     
     private static function push_wc_products()
     {
-        error_log("push products");
-        
-//         $err_msg = "about to send batches...";
-//         self::send_error_report($err_msg);
+        $err_msg = "about to get batches...";
+        self::send_error_report($err_msg);
         /**
          * Check if WooCommerce is active
          **/
-        if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-        	try {
-	            $product_array = array();
-	            $loop = self::query_products();
-	            $page        = $loop->get( 'paged' );	// batch number
-				$total       = $loop->found_posts;		// total number of products
-				$total_pages = $loop->max_num_pages;	// total number of batches
-	            global $blog_id;
-	            $max_num_of_batches = get_option('max_num_of_batches');
-	            $is_additional_fetch_required = false;
-
-	            while ($page <= $total_pages)
-	            {
-	                while ( $loop->have_posts() ) 
-	                {
-	                    $loop->the_post(); 
-	                    $product = self::get_product_from_post(get_the_ID());
-	                    $product_array[] = $product;
-	                }
-	                
-	                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
-	                	// need to schedule request from server side to send the rest of the batches after activation ends
-	                	$is_additional_fetch_required = true;
-	                
-	                $send_products = array(
-	                		'total_pages' 				   	=> $total_pages, 
-	                		'total_products'				=> $total, 
-	                		'current_page' 					=> $page, 
-	                		'products'						=> $product_array,
-	                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
-	                );
-	                
-	                self::send_products_batch($send_products);
-	                
-	                // clearing array
-	                unset($product_array);	
-	                $product_array = array();
-	                unset($send_products);
-	                
-	                $page = $page + 1;
-	                
-	                // too many products on activation, will get the rest of the products, by server request, after the activation is done
-	                if ($is_additional_fetch_required)
-	                	break;
-	                
-	                $loop = self::query_products($page);
+        try{
+	        if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+	        	try {
+	        		$err_msg = "woocommerce checked";
+	        		self::send_error_report($err_msg);
+	        		
+		            $product_array = array();
+		            $loop = self::query_products();
+		            $page        = $loop->get( 'paged' );	// batch number
+					$total       = $loop->found_posts;		// total number of products
+					$total_pages = $loop->max_num_pages;	// total number of batches
+		            global $blog_id;
+		            $max_num_of_batches = get_option('max_num_of_batches');
+		            $is_additional_fetch_required = false;
+	
+		            $err_msg = "before page loop";
+		            self::send_error_report($err_msg);
+		            
+		            while ($page <= $total_pages)
+		            {
+		                while ( $loop->have_posts() ) 
+		                {
+		                    $loop->the_post(); 
+		                    $product = self::get_product_from_post(get_the_ID());
+		                    $product_array[] = $product;
+		                }
+		                
+		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
+		                	// need to schedule request from server side to send the rest of the batches after activation ends
+		                	$is_additional_fetch_required = true;
+		                
+		                $send_products = array(
+		                		'total_pages' 				   	=> $total_pages, 
+		                		'total_products'				=> $total, 
+		                		'current_page' 					=> $page, 
+		                		'products'						=> $product_array,
+		                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
+		                );
+		                
+		                $err_msg = "about to send batche...";
+		                self::send_error_report($err_msg);
+		                
+		                self::send_products_batch($send_products);
+		                
+		                // clearing array
+		                unset($product_array);	
+		                $product_array = array();
+		                unset($send_products);
+		                
+		                $page = $page + 1;
+		                
+		                // too many products on activation, will get the rest of the products, by server request, after the activation is done
+		                if ($is_additional_fetch_required)
+		                	break;
+		                
+		                $loop = self::query_products($page);
+		            }
+		           
+	            } catch (Exception $e) {
+	            	$err_msg = "exception on woocommerce check, msg: " . $e->getMessage();
+	            	self::send_error_report($err_msg);
 	            }
-	           
-            } catch (Exception $e) {
-            	$err_msg = "wc_install_products raised exception, msg: " . $e->getMessage();
-            	self::send_error_report($err_msg);
-            }
-                        
-        } else {        	
-        	// alternative way  
-        	try{
-	        	include_once( ABSPATH . 'wp-admin/includes/plugin.php' ); 
-	        	if (is_plugin_active( 'woocommerce/woocommerce.php'))
-	        		$is_woo = 'true';
-	        	else 
-	        		$is_woo = 'false';
-        	} catch (Exception $e){
-        		$is_woo = 'false (Exception)';
-        	}
-        	
+	                        
+	        } else {        	
+	        	// alternative way  
+	        	try{
+		        	include_once( ABSPATH . 'wp-admin/includes/plugin.php' ); 
+		        	if (is_plugin_active( 'woocommerce/woocommerce.php'))
+		        		$is_woo = 'true';
+		        	else 
+		        		$is_woo = 'false';
+	        	} catch (Exception $e){
+	        		$is_woo = 'false (Exception)';
+	        	}
+	        	
+	        	$err_msg = "can't find active plugin of woocommerce, alternative check: " . $is_woo;
+	        	self::send_error_report($err_msg);
+	        }
+        } catch (Exception $e){
         	$err_msg = "can't find active plugin of woocommerce, alternative check: " . $is_woo;
         	self::send_error_report($err_msg);
         }
@@ -1128,6 +1140,8 @@ class WCISPlugin {
 			$query = $wp_query->query_vars;
 			$url_args = add_query_arg();
 			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false)
+				return $wp_query;
+			if (strpos($url_args, 'orderby=') !== false)
 				return $wp_query;
 
 			if (isset($query['s']) ) 
