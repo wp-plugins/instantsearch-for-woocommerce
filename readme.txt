@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, woocommerce product suggest search
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,10 @@ Not yet.  It's in the makes.
 
 
 == Changelog ==
+
+= 1.0.10 =
+* full text search disable on "ordering" + additional install logging
+
 = 1.0.9 =
 * Enhanced WooCommerce Full Text search with InstantSearch+ the best cloud-based search
 
