@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.10';
+	const VERSION = '1.0.11';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -87,7 +87,8 @@ class WCISPlugin {
         add_filter('query_vars', array($this, 'filter_instantsearchplus_request'));   
 
         // cron
-        add_action( 'instantsearchplus_cron_request_event', array( $this, 'handle_cron_request' ) );    
+        add_action( 'instantsearchplus_cron_request_event', array( $this, 'handle_cron_request' ) );   
+        add_action( 'instantsearchplus_cron_check_alerst', array( $this, 'check_for_alerts' ) );
         
         // FullText search
         add_filter( 'posts_search', array( $this, 'posts_search_handler' ) );
@@ -95,6 +96,8 @@ class WCISPlugin {
         add_filter( 'post_limits', array( $this, 'post_limits_handler' ) );
         add_filter( 'the_posts', array( $this, 'the_posts_handler' ) );
         
+        // admin message     
+        add_action('admin_notices',  array( $this, 'show_admin_message'));
 	}
 
 	/**
@@ -174,6 +177,8 @@ class WCISPlugin {
 	 */
 	public static function deactivate( $network_wide ) {		
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' );
+		wp_clear_scheduled_hook( 'instantsearchplus_cron_check_alerst' ); 	
+		
 		delete_option('cron_product_list');
 		delete_option('is_activation_triggered');
 		
@@ -235,6 +240,7 @@ class WCISPlugin {
 		delete_option('authentication_key');
 		
 		delete_option('cron_product_list');
+		delete_option('wcic_site_alert');
 		
 		delete_option('is_out_of_sync');
 		delete_option('is_out_of_sync_install');
@@ -273,7 +279,10 @@ class WCISPlugin {
 		if (get_option('is_activation_triggered'))
 			return;
 		update_option('is_activation_triggered', true);
-			
+				
+		if (!wp_next_scheduled( 'instantsearchplus_cron_check_alerst' ))	
+			wp_schedule_event(time(), 'daily', 'instantsearchplus_cron_check_alerst');
+		
 		$url = self::SERVER_URL . 'wc_install';  
         try{
         // multisite data
@@ -971,6 +980,10 @@ class WCISPlugin {
 				self::puch_wc_batch($batch_num);
 				status_header(200);
 				exit();
+			} elseif ($req->query_vars['instantsearchplus'] == 'remove_admin_message'){
+				delete_option('wcic_site_alert');
+			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
+				check_for_alerts();
 			}
 		}
 	}
@@ -1242,6 +1255,42 @@ class WCISPlugin {
 		return $posts;
 	}	
 	// FullText search end
+
+	
+	// admin quota exceeded message
+	function show_admin_message(){				
+		if (is_admin() && get_option('wcic_site_alert')){
+			$alert = get_option('wcic_site_alert');
+			$msg = $alert['alerts'][0]['message'];
+			
+			echo '<div class="error" style="background-color:#fef7f1;"><p>';
+			printf(__('<b> %1$s </b> | <b><a href="%2$s">Upgrade now</a></b> to enable back'), $msg, add_query_arg('page', 'WCISPlugin'));
+			echo "</p></div>";
+		}	
+	}
+	
+	function check_for_alerts(){
+		$url = self::SERVER_URL . 'ext_info';
+		$args = array(
+			'body' => array('site_id' 				=> get_option( 'wcis_site_id' ),
+							'version' 				=> self::VERSION,
+					),
+					'timeout' => 10,
+		);
+			
+		$resp = wp_remote_post( $url, $args );
 		
+		if (is_wp_error($resp) || $resp['response'][code] != 200){	
+			$err_msg = "check_for_alerts failed";
+			self::send_error_report($err_msg); 
+		} else {	
+			$response_json = json_decode($resp['body'], true);
+			if (!empty($response_json['alerts']))
+				update_option('wcic_site_alert', $response_json);
+			else 
+				if (get_option('wcic_site_alert'))
+					delete_option('wcic_site_alert');
+		}
+	}
 }
 ?>
