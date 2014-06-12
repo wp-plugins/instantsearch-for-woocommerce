@@ -204,7 +204,9 @@ class WCISPluginAdmin {
 	 * @since    1.0.0
 	 */
 	public function display_plugin_admin_page() {
-            $wc_admin_url = 'http://woo.instantsearchplus.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' );
+		if (get_option('wcic_site_alert'))
+			delete_option('wcic_site_alert');
+        $wc_admin_url = 'http://woo.instantsearchplus.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' );
 	    include_once( 'views/admin.php' );
 	}
 
