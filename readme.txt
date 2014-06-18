@@ -55,6 +55,7 @@ To learn more please visit http://www.instantsearchplus.com/instantsearchplus-au
 2. Search for 'InstantSearch+ for WooCommerce'
 3. Click 'Install Now'
 4. Activate the plugin on the Plugin dashboard
+5. Add any search widget (like WooCommerce Product Search) to your preferred location by visiting Wordpress Admin ==> Appearance ==> Widgets
 
 Having issues?  contact support@instantsearchplus.com
 
@@ -73,6 +74,10 @@ Our basic offering is indeed free and works great for small WooCommerce sites.  
 = Does InstantSearch+ support WooCommerce Multisite? =
 
 Not yet.  It's in the makes.
+
+= Can InstantSearch+ work with my searchbox? =
+
+Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wordpress Widget or a custom template
 
 
 == Screenshots ==
