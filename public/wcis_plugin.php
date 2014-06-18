@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.11';
+	const VERSION = '1.0.12';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -367,6 +367,9 @@ class WCISPlugin {
             	
             	// TODO: remove it
             	update_option('do_not_send_retries', true);
+            	
+            	$err_msg = "Install confirmation: id: " . $site_id . ", authentication_key: " . $authentication_key;
+            	self::send_error_report($err_msg);
 	            	
 			} catch (Exception $e){
             	$err_msg = "After install internal exception raised msg: ". $e->getMessage();
@@ -433,17 +436,12 @@ class WCISPlugin {
     
     private static function push_wc_products()
     {
-        $err_msg = "about to get batches...";
-        self::send_error_report($err_msg);
         /**
          * Check if WooCommerce is active
          **/
         try{
 	        if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-	        	try {
-	        		$err_msg = "woocommerce checked";
-	        		self::send_error_report($err_msg);
-	        		
+	        	try {	        		
 		            $product_array = array();
 		            $loop = self::query_products();
 		            $page        = $loop->get( 'paged' );	// batch number
@@ -453,17 +451,22 @@ class WCISPlugin {
 		            $max_num_of_batches = get_option('max_num_of_batches');
 		            $is_additional_fetch_required = false;
 	
-		            $err_msg = "before page loop";
-		            self::send_error_report($err_msg);
+		            $err_msg = "before page loop parameters: page: " . $page . ", num of products: " . $total . ", num of pages: " . $total_pages . ", max_num_of_batches: " . $max_num_of_batches;
+		            self::send_error_report($err_msg); // <-- last print!!!
 		            
 		            while ($page <= $total_pages)
 		            {
+		            	$err_msg = "pages loop...";
+		            	self::send_error_report($err_msg);
 		                while ( $loop->have_posts() ) 
 		                {
 		                    $loop->the_post(); 
 		                    $product = self::get_product_from_post(get_the_ID());
 		                    $product_array[] = $product;
 		                }
+		                
+		                $err_msg = "after while loop, num of products: " . count($product_array);
+		                self::send_error_report($err_msg);
 		                
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
@@ -476,10 +479,7 @@ class WCISPlugin {
 		                		'products'						=> $product_array,
 		                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
 		                );
-		                
-		                $err_msg = "about to send batche...";
-		                self::send_error_report($err_msg);
-		                
+		                		                
 		                self::send_products_batch($send_products);
 		                
 		                // clearing array
@@ -1209,7 +1209,7 @@ class WCISPlugin {
 	}
 	
 	public function posts_search_handler($search){
-		if( is_search() && ! is_admin() && get_option('wcis_fulltext_ids')){
+		if( is_search() && !is_admin() && get_option('wcis_fulltext_ids')){
 			$search = ''; // disable WordPress search
 		}
 		return $search;	
