@@ -17,16 +17,17 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.12';
+	const VERSION = '1.0.13';
 	
 	const RETRIES_LIMIT = 3;
 	
 	const RETRY_PRODUCT_ARRAY_MAX_COUNT = 20;
 	
 	// cron const variables
-	const CRON_THRESHOLD_TIME 				= 600; 	// 60 * 10 -> 10 minutes
-	const CRON_EXECUTION_TIME 				= 300; 	// 30 * 10 -> 5 minutes
-	const SINGLES_TO_BATCH_THRESHOLD		= 10;	// if more then 10 products send as batch
+	const CRON_THRESHOLD_TIME 				= 1200; 	// -> 20 minutes
+	const CRON_EXECUTION_TIME 				= 900; 		// -> 15 minutes
+	const SINGLES_TO_BATCH_THRESHOLD		= 10;		// if more then 10 products send as batch
+	
 
 	/**
 	 *
@@ -238,6 +239,7 @@ class WCISPlugin {
 		delete_option('wcis_site_id');
 		delete_option('wcis_batch_size');
 		delete_option('authentication_key');
+		delete_option('wcis_timeframe');
 		
 		delete_option('cron_product_list');
 		delete_option('wcic_site_alert');
@@ -365,11 +367,11 @@ class WCISPlugin {
             	$authentication_key = $response_json->{'authentication_key'};
             	update_option('authentication_key', $authentication_key);
             	
+            	$update_product_timeframe = $response_json->{'timeframe'};
+            	update_option('wcis_timeframe', $update_product_timeframe);
+            	
             	// TODO: remove it
             	update_option('do_not_send_retries', true);
-            	
-            	$err_msg = "Install confirmation: id: " . $site_id . ", authentication_key: " . $authentication_key;
-            	self::send_error_report($err_msg);
 	            	
 			} catch (Exception $e){
             	$err_msg = "After install internal exception raised msg: ". $e->getMessage();
@@ -450,23 +452,15 @@ class WCISPlugin {
 		            global $blog_id;
 		            $max_num_of_batches = get_option('max_num_of_batches');
 		            $is_additional_fetch_required = false;
-	
-		            $err_msg = "before page loop parameters: page: " . $page . ", num of products: " . $total . ", num of pages: " . $total_pages . ", max_num_of_batches: " . $max_num_of_batches;
-		            self::send_error_report($err_msg); // <-- last print!!!
 		            
 		            while ($page <= $total_pages)
 		            {
-		            	$err_msg = "pages loop...";
-		            	self::send_error_report($err_msg);
 		                while ( $loop->have_posts() ) 
 		                {
 		                    $loop->the_post(); 
 		                    $product = self::get_product_from_post(get_the_ID());
 		                    $product_array[] = $product;
 		                }
-		                
-		                $err_msg = "after while loop, num of products: " . count($product_array);
-		                self::send_error_report($err_msg);
 		                
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
@@ -548,53 +542,64 @@ class WCISPlugin {
     
     private static function get_product_from_post($post_id)
     {
-        $product = new WC_Product( $post_id );
+    	$woocommerce_ver_below_2_1 = false;
+    	if ( version_compare( WOOCOMMERCE_VERSION, '2.1', '<' ) )
+    		$woocommerce_ver_below_2_1 = true;
+
+    	if ($woocommerce_ver_below_2_1){
+    		$product = 	new WC_Product_Simple($post_id);
+    	} else {
+        	$product = new WC_Product( $post_id );
+    	}
+        
         //$post_categories = wp_get_post_categories( $post_id );
         //$categories = get_the_category();
-        
-        $thumbnail = $product->get_image();
-        if ($thumbnail)
-        {
-            preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
-            $thumbnail = array_pop($result);
-        }
-        
-        $send_product = array('product_id' => $product->id,
-                              'currency' => get_woocommerce_currency(),   
-                              'price' =>$product->get_price(),
-                              'sale_price'=>$product->get_sale_price(),
-                              'url' =>$product->get_permalink(),
-                              'thumbnail_url' =>$thumbnail,
-                              'action'=>'insert',
-                              'description'=>$product->get_post_data()->post_content,
-                              'short_description'=>$product->get_post_data()->post_excerpt,
-                              'name'=>$product->get_title(),
-							  'sku' => $product->get_sku(),
-                              'categories'=>$product->get_categories(),
-                              'store_id'=>get_current_blog_id(),
-        					  'identifier' => (string)$product->id,
-        		
-        					  'sellable' => $product->is_purchasable(),
-        					  'visibility' =>$product->is_visible(),
-        		
-        					  'stock_quantity' => $product->get_stock_quantity(),
-        					  'is_managing_stock' => $product->managing_stock(),
-        				      'is_backorders_allowed' => $product->backorders_allowed(),
-        					  'is_purchasable' => $product->is_purchasable(),
-        					  'is_in_stock' => $product->is_in_stock( ),
-        					  
-        					  'product_status' => get_post_status($post_id),
 
-        );
-        
-        try{
-        	$variable = new WC_Product_Variable($post_id);
-        	$send_product['price_min'] = $variable->get_variation_price('min');
-        	$send_product['price_max'] = $variable->get_variation_price('max');
-        }catch (Exception $e){
-        	$send_product['price_min'] = null;
-        	$send_product['price_max'] = null;
-        }		 
+    	$thumbnail = $product->get_image();    	
+    	if ($thumbnail)
+    	{
+    		preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
+    		$thumbnail = array_pop($result);
+    	}
+    	
+    	$send_product = array('product_id' => $product->id,
+    			'currency' => get_woocommerce_currency(),
+    			'price' =>$product->get_price(),
+    			'url' =>get_permalink($product->id),
+    			'thumbnail_url' =>$thumbnail,
+    			'action'=>'insert',
+    			'description'=>$product->get_post_data()->post_content,
+    			'short_description'=>$product->get_post_data()->post_excerpt,
+    			'name'=>$product->get_title(),
+    			'sku' => $product->get_sku(),
+    			'categories'=>$product->get_categories(),
+    			'store_id'=>get_current_blog_id(),
+    			'identifier' => (string)$product->id,
+    	
+    			'sellable' => $product->is_purchasable(),
+    			'visibility' =>$product->is_visible(),
+    	
+    			'stock_quantity' => $product->get_stock_quantity(),
+    			'is_managing_stock' => $product->managing_stock(),
+    			'is_backorders_allowed' => $product->backorders_allowed(),
+    			'is_purchasable' => $product->is_purchasable(),
+    			'is_in_stock' => $product->is_in_stock( ),
+    			 
+    			'product_status' => get_post_status($post_id),
+    	);
+    	
+    	if(!$woocommerce_ver_below_2_1){
+	    	try{
+	    		$send_product['sale_price'] = $product->get_sale_price();
+	    		
+	    		$variable = new WC_Product_Variable($post_id);
+	    		$send_product['price_min'] = $variable->get_variation_price('min');
+	    		$send_product['price_max'] = $variable->get_variation_price('max');
+	    	}catch (Exception $e){
+	    		$send_product['price_min'] = null;
+	    		$send_product['price_max'] = null;
+	    	}
+    	}
         
         return $send_product;
     }
@@ -609,16 +614,21 @@ class WCISPlugin {
     	$products_list = get_option('cron_product_list');
     	$timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
     	
+    	if(get_option('wcis_timeframe'))
+    		$timeframe = get_option('wcis_timeframe');
+    	else 
+    		$timeframe = self::CRON_EXECUTION_TIME;
+    	
 		if ($timestamp != false){	// event already scheduled
 			if ($products_list){	// if there is at least one product in the list
 				// checking time-stamp diff (current time - first product's time-stamp)
 				$delta = time() - $products_list[0]['time_stamp'];
 					
-				if (($delta > self::CRON_THRESHOLD_TIME) && !get_option('cron_in_progress')){
+				if (($delta > ($timeframe + self::CRON_THRESHOLD_TIME)) && !get_option('cron_in_progress')){
 					wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' ); 	// removing task from cron
 					self::execute_update_request();										// executing request for all waiting products
 					// reschedule current product to be executed by cron
-					wp_schedule_single_event(time() + self::CRON_EXECUTION_TIME, 'instantsearchplus_cron_request_event');
+					wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
 				}
 				self::insert_product_to_cron_list($post_id, $action);
 				
@@ -634,7 +644,7 @@ class WCISPlugin {
     			if (!get_option('cron_in_progress')){
     				// if cron is currently not in progress -> update all products that are in the list
     				self::execute_update_request();
-    				wp_schedule_single_event(time() + self::CRON_EXECUTION_TIME, 'instantsearchplus_cron_request_event');
+    				wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
     			}
     			// add current product to the list and schedule cron event
     			self::insert_product_to_cron_list($post_id, $action);
@@ -642,7 +652,7 @@ class WCISPlugin {
     		} else {
     			// updating product's list and activating cron event
     			self::insert_product_to_cron_list($post_id, $action);
-    			wp_schedule_single_event(time() + self::CRON_EXECUTION_TIME, 'instantsearchplus_cron_request_event');			
+    			wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');			
     		}
     	}  	
 //     	self::send_product_update($post_id, $action);
@@ -908,6 +918,10 @@ class WCISPlugin {
         $args = "?mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
+        if (is_admin_bar_showing())
+        	$args = $args . "is_admin_bar_showing=1&";
+        else
+        	$args = $args . "is_admin_bar_showing=0&";
         if ($product)
         {
             $args .= 'product_url=' . get_permalink() .'&';
@@ -960,14 +974,7 @@ class WCISPlugin {
 			} elseif ($req->query_vars['instantsearchplus'] == 'sync'){
 				self::push_wc_products();
 				status_header(200);
-				exit();
-			} elseif ($req->query_vars['instantsearchplus'] == 'reset_retries'){
-				// reseting all retries attempts
-				delete_option('is_out_of_sync_product');
-				delete_option('is_out_of_sync_install');
-				delete_option('is_out_of_sync_all_products');				
-				update_option('is_out_of_sync', false);	
-				delete_option('do_not_send_retries');			
+				exit();		
 			} elseif ($req->query_vars['instantsearchplus'] == 'stop_retries'){
 				// do not send retries anymore
 				update_option('do_not_send_retries', true);
@@ -980,69 +987,20 @@ class WCISPlugin {
 				self::puch_wc_batch($batch_num);
 				status_header(200);
 				exit();
+			} elseif ($req->query_vars['instantsearchplus'] == 'change_timeframe'){
+				$timeframe = $req->query_vars['instantsearchplus_parameter'];
+				self::update_timeframe($timeframe);
+				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'remove_admin_message'){
 				delete_option('wcic_site_alert');
+				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
-				check_for_alerts();
+				self::check_for_alerts();
+				exit();
 			}
 		}
 	}
 	
-	function process_retry_request(){
-		if (!get_option('is_out_of_sync') && get_option('do_not_send_retries'))
-			return;
-		
-// 		check for retries limitation
-		$limit = get_option('retries_limit_counter');
-		if ($limit){
-			if ($limit < self::RETRIES_LIMIT){
-				$limit++;
-				update_option('retries_limit_counter', $limit);
-			} else {	// retried too many times
-				delete_option('retries_limit_counter');
-				update_option('is_out_of_sync', false);
-				delete_option('is_out_of_sync_install');
-				delete_option('is_out_of_sync_all_products');
-				delete_option('is_out_of_sync_product');
-				return;
-			}
-		} else 
-			update_option('retries_limit_counter', 1);
-		
-		if (get_option('is_out_of_sync_install'))
-			self::single_activate();
-		else if (get_option('is_out_of_sync_all_products'))
-			self::push_wc_products();
-		else if (get_option('is_out_of_sync_product')){
-			$products_array = get_option('is_out_of_sync_product');
-			foreach ($products_array as $key => $product_desc){
-				$product = self::get_product_from_post($product_desc['post_id']);
-				$product_update = array('topic'=>$product_desc['action'], 'product'=>$product);
-				$json_product_update = json_encode($product_update);
-				$url = self::SERVER_URL . 'wc_update_products';
-				$args = array(
-						'body' => array( 'site' => get_option('siteurl'), 
-										 'site_id' => get_option( 'wcis_site_id' ), 
-										 product_update => $json_product_update, 
-										 'authentication_key' => get_option('authentication_key')),
-				);
-
-				$resp = wp_remote_post( $url, $args );
-		        if (is_wp_error($resp) || $resp['response'][code] != 200)
-		        	break;
-		        else  // retry succeeded - removing from retries array;
-		        	unset($products_array[$key]);
-			}
-			
-			if (count($products_array) == 0){
-				delete_option('is_out_of_sync_product');
-				update_option('is_out_of_sync', false);
-				delete_option('retries_limit_counter');
-			} else {
-				update_option('is_out_of_sync_product', $products_array);
-			}	
-		}				
-	}
 	
 	function handle_cron_request(){
 		update_option('cron_in_progress', True);
@@ -1167,6 +1125,10 @@ class WCISPlugin {
 			else 
 				$page_num = $query['paged'];
 			
+			$results_per_page = get_option('posts_per_page');
+			if ($wp_query->get('posts_per_page') > $results_per_page) 
+				$results_per_page = $wp_query->get('posts_per_page');
+			
 			$url = self::SERVER_URL . 'wc_search';
 			$args = array(
 					'body' => array('s' 					=> get_option('siteurl'),
@@ -1176,7 +1138,8 @@ class WCISPlugin {
 									'v' 					=> self::VERSION,
 									'store_id' 				=> get_current_blog_id(),
 									'p' 					=> $page_num,				// requested page number
-									'products_per_page'		=> get_option('posts_per_page')				
+									'products_per_page'		=> $results_per_page,
+									'is_admin_view'			=> is_admin_bar_showing()			
 					),
 					'timeout' => 20,
 			);
@@ -1197,8 +1160,11 @@ class WCISPlugin {
 				foreach ($response_json['id_list'] as $product_id)
 					$product_ids[] = $product_id;
 
+				if (array_key_exists('fulltext_disabled', $response_json))
+					return $wp_query;
+							
 				update_option('wcis_fulltext_ids', $product_ids);
-				if ($response_json['total_results'] != 0)
+				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0)
 					update_option('wcis_total_results', $response_json['total_results']);
 				else
 					update_option('wcis_total_results', -1);
@@ -1228,9 +1194,11 @@ class WCISPlugin {
 			$total_results = get_option('wcis_total_results');	
 			if ($total_results == -1)
 				$total_results = 0;
+			
 			$wp_query->found_posts = $total_results;			
 			$wp_query->max_num_pages = ceil($total_results / get_option('posts_per_page'));
 			$wp_query->query_vars['post_type'] = 'product';
+			$wp_query->query_vars['posts_per_page'] = get_option('posts_per_page');
 			
 			$fulltext_ids = get_option('wcis_fulltext_ids');
 
@@ -1269,15 +1237,14 @@ class WCISPlugin {
 		}	
 	}
 	
-	function check_for_alerts(){
+	function check_for_alerts($is_from_page_load = false){
 		$url = self::SERVER_URL . 'ext_info';
 		$args = array(
 			'body' => array('site_id' 				=> get_option( 'wcis_site_id' ),
 							'version' 				=> self::VERSION,
 					),
 					'timeout' => 10,
-		);
-			
+		);	
 		$resp = wp_remote_post( $url, $args );
 		
 		if (is_wp_error($resp) || $resp['response'][code] != 200){	
@@ -1285,12 +1252,34 @@ class WCISPlugin {
 			self::send_error_report($err_msg); 
 		} else {	
 			$response_json = json_decode($resp['body'], true);
-			if (!empty($response_json['alerts']))
-				update_option('wcic_site_alert', $response_json);
-			else 
-				if (get_option('wcic_site_alert'))
-					delete_option('wcic_site_alert');
+			if (!$is_from_page_load){
+				if (!empty($response_json['alerts'])){
+					update_option('wcic_site_alert', $response_json);
+				} else { 
+					if (get_option('wcic_site_alert'))
+						delete_option('wcic_site_alert');
+				}
+			}
+				
+			if (array_key_exists('timeframe', $response_json))
+				self::update_timeframe($response_json['timeframe']);
 		}
+	}
+	
+	function update_timeframe($new_timeframe){	
+		if (get_option('wcis_timeframe')){
+			$err_msg = "update_timeframe change: old:" . get_option('wcis_timeframe') . ", new: " . $new_timeframe;
+			self::send_error_report($err_msg);
+		} else {
+			$err_msg = "update_timeframe change: new: " . $new_timeframe;
+			self::send_error_report($err_msg);
+		}
+		if (get_option('wcis_timeframe') && ($new_timeframe < get_option('wcis_timeframe'))){	// on subscription upgrade
+			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+			if (get_option('cron_product_list'))
+				self::execute_update_request();			
+		}
+		update_option('wcis_timeframe', $new_timeframe);
 	}
 }
 ?>
