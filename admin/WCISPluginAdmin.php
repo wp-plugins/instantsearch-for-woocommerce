@@ -206,6 +206,9 @@ class WCISPluginAdmin {
 	public function display_plugin_admin_page() {
 		if (get_option('wcic_site_alert'))
 			delete_option('wcic_site_alert');
+
+		WCISPlugin::get_instance()->check_for_alerts(true);
+		
         $wc_admin_url = 'http://woo.instantsearchplus.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' );
 	    include_once( 'views/admin.php' );
 	}
