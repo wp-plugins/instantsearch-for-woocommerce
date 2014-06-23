@@ -1154,14 +1154,14 @@ class WCISPlugin {
 								
 			} else {				
 				$response_json = json_decode($resp['body'], true);
+				
+				if (array_key_exists('fulltext_disabled', $response_json))
+					return $wp_query;
 
 				$product_ids = array();
 							
 				foreach ($response_json['id_list'] as $product_id)
 					$product_ids[] = $product_id;
-
-				if (array_key_exists('fulltext_disabled', $response_json))
-					return $wp_query;
 							
 				update_option('wcis_fulltext_ids', $product_ids);
 				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0)
