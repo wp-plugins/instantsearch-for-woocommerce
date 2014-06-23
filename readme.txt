@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, woocommerce product suggest search
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.0.12
+Stable tag: 1.0.13
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,11 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 
 == Changelog ==
+
+= 1.0.13 = 
+* installation error fix when WooCommerce's version is below 2.1
+* added - notification on sync products status after install
+* fix - on full text search, results per page parameter modification
 
 = 1.0.12 = 
 * small bug fix + logging
