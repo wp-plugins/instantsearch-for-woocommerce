@@ -381,7 +381,6 @@ class WCISPlugin {
             	$update_product_timeframe = $response_json->{'wcis_timeframe'};
             	update_option('wcis_timeframe', $update_product_timeframe);
             	
-            	update_option('wcis_logging', true);
             	// TODO: remove it
             	update_option('do_not_send_retries', true);
 	            	
