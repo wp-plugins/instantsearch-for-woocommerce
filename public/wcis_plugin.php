@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.14';
+	const VERSION = '1.0.15';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -381,6 +381,7 @@ class WCISPlugin {
             	$update_product_timeframe = $response_json->{'wcis_timeframe'};
             	update_option('wcis_timeframe', $update_product_timeframe);
             	
+            	update_option('wcis_logging', true);
             	// TODO: remove it
             	update_option('do_not_send_retries', true);
 	            	
@@ -454,7 +455,12 @@ class WCISPlugin {
          **/
         try{
 	        if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-	        	try {	        		
+	        	try {	     
+	        		if (get_option('wcis_logging')){
+	        			$err_msg = "found woocommerce extension";
+	        			self::send_error_report($err_msg);
+	        		}
+	        		
 		            $product_array = array();
 		            $loop = self::query_products();
 		            $page        = $loop->get( 'paged' );	// batch number
@@ -464,6 +470,11 @@ class WCISPlugin {
 		            $max_num_of_batches = get_option('max_num_of_batches');
 		            $is_additional_fetch_required = false;
 		            
+		            if (get_option('wcis_logging')){
+		            	$err_msg = "before pages loop";
+		            	self::send_error_report($err_msg);
+		            }
+		            
 		            while ($page <= $total_pages)
 		            {
 // 		                while ( $loop->have_posts() ) 
@@ -472,11 +483,19 @@ class WCISPlugin {
 // 		                    $product = self::get_product_from_post(get_the_ID());
 // 		                    $product_array[] = $product;
 // 		                }
+		            	if (get_option('wcis_logging')){
+		            		$err_msg = "preparing page: " . $page;
+		            		self::send_error_report($err_msg);
+		            	}
 		            	if ($loop->have_posts()){
 		            		foreach( $loop->posts as $id ){
 		            			$product = self::get_product_from_post($id);
 		            			$product_array[] = $product;
 		            		}
+		            	}
+		            	if (get_option('wcis_logging')){
+		            		$err_msg = "after product's loop";
+		            		self::send_error_report($err_msg);
 		            	}
 		                
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
@@ -490,7 +509,11 @@ class WCISPlugin {
 		                		'products'						=> $product_array,
 		                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
 		                );
-		                		                
+
+		                if (get_option('wcis_logging')){
+		                	$err_msg = "sending batch...";
+		                	self::send_error_report($err_msg);
+		                }
 		                self::send_products_batch($send_products);
 		                
 		                // clearing array
@@ -1024,7 +1047,19 @@ class WCISPlugin {
 			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
 				self::check_for_alerts();
 				exit();
-			}
+			} elseif ($req->query_vars['instantsearchplus'] == 'change_logging_status'){
+				if (get_option('wcis_logging'))
+					update_option('wcis_logging', true);
+				else
+					remove_option('wcis_logging');
+				
+				if (get_option('wcis_logging'))
+					$err_msg = "logging request - logging turned ON!";
+				else
+					$err_msg = "logging request - logging turned OFF!";
+				self::send_error_report($err_msg);
+				exit();
+			} 
 		}
 	}
 	
