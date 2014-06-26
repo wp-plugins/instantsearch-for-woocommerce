@@ -27,7 +27,6 @@ if ( ! defined( 'WPINC' ) ) {
  *----------------------------------------------------------------------------*/
 
 require_once( plugin_dir_path( __FILE__ ) . 'public/wcis_plugin.php' );
-//include( plugin_dir_path( __FILE__ ) . 'ipn/paypal-ipn.php');
 
 
 register_activation_hook( __FILE__, array( 'WCISPlugin', 'activate' ) );
@@ -38,6 +37,8 @@ register_uninstall_hook( __FILE__, array( 'WCISPlugin', 'uninstall' ) );
 
 
 add_action( 'plugins_loaded', array( 'WCISPlugin', 'get_instance' ) );
+
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( 'WCISPlugin', 'wcis_add_action_links'));
 
 /*----------------------------------------------------------------------------*
  * Dashboard and Administrative Functionality
