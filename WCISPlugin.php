@@ -9,7 +9,7 @@
  * Plugin Name:       InstantSearch+ for WooCommerce
  * Plugin URI:        www.instantsearchplus.com 
  * Description:       Best search plugin for WooCommerce
- * Version:           1.0.15
+ * Version:           1.0.16
  * Author:            Fast Simon Inc
  * Author URI:        www.instantsearchplus.com
  * Text Domain:       plugin-name-locale
@@ -50,3 +50,5 @@ if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
 	add_action( 'plugins_loaded', array( 'WCISPluginAdmin', 'get_instance' ) );
 
 }
+
+?>
