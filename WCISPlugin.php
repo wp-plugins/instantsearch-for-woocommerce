@@ -50,5 +50,4 @@ if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
 	add_action( 'plugins_loaded', array( 'WCISPluginAdmin', 'get_instance' ) );
 
 }
-
 ?>
