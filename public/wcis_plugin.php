@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.16';
+	const VERSION = '1.0.17';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -386,7 +386,7 @@ class WCISPlugin {
             	$update_product_timeframe = $response_json->{'wcis_timeframe'};
             	update_option('wcis_timeframe', $update_product_timeframe);
             	
-            	// TODO: remove it
+            	// TODO: experimented
             	update_option('do_not_send_retries', true);
 	            	
 			} catch (Exception $e){
@@ -973,20 +973,26 @@ class WCISPlugin {
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
         if (is_admin_bar_showing())
-        	$args = $args . "is_admin_bar_showing=1&";
+        	$is_admin_bar_showing = "is_admin_bar_showing=1&";
         else
-        	$args = $args . "is_admin_bar_showing=0&";
+        	$is_admin_bar_showing = "is_admin_bar_showing=0&";
+        $args .= $is_admin_bar_showing;
         if ($product)
         {
             $args .= 'product_url=' . get_permalink() .'&';
             $args .= $product;
         }
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
-        
-        if (is_search()){
-        	$full_text_script = 'https://acp-magento.appspot.com/js/wcis-results.js';
-        	wp_enqueue_script( $this->plugin_slug . '-fulltext', $full_text_script, array(), self::VERSION );
-        }
+						
+		if (get_option('fulltext_disabled') == false){
+	        if (is_search() && get_option('just_created_site')){
+	        	$full_text_script = 'https://acp-magento.appspot.com/js/wcis-results.js?just_created_site=true&' . $is_admin_bar_showing;
+	        	wp_enqueue_script( $this->plugin_slug . '-fulltext', $full_text_script, array('jquery'), self::VERSION );
+	        } elseif(is_search() && get_option('wcis_enable_highlight')) {
+	        	$full_text_script = 'https://acp-magento.appspot.com/js/wcis-results.js';
+	        	wp_enqueue_script( $this->plugin_slug . '-fulltext', $full_text_script, array('jquery'), self::VERSION );
+	        }
+		}
 	}
 	
 	
@@ -1074,10 +1080,10 @@ class WCISPlugin {
 				self::send_error_report($err_msg);
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'disable_highlight'){
-				if (!get_option('wcis_disable_highlight'))
-					update_option('wcis_disable_highlight', true);
+				if (get_option('wcis_enable_highlight') == false)
+					update_option('wcis_enable_highlight', true);
 				else
-					delete_option('wcis_disable_highlight');
+					delete_option('wcis_enable_highlight');
 			}
 			
 		}
@@ -1240,8 +1246,14 @@ class WCISPlugin {
 			} else {				
 				$response_json = json_decode($resp['body'], true);
 				
-				if (array_key_exists('fulltext_disabled', $response_json))
+				if (array_key_exists('fulltext_disabled', $response_json)){
 					return self::on_fulltext_disable_query($wp_query);
+				} elseif (array_key_exists('just_created_site', $response_json)){
+					update_option('just_created_site', true);
+					delete_option('fulltext_disabled');
+					return $wp_query;
+				} elseif (get_option('just_created_site'))
+					delete_option('just_created_site');
 
 				$product_ids = array();
 
@@ -1265,12 +1277,13 @@ class WCISPlugin {
 				return self::on_fulltext_disable_query($wp_query);
 		}
 		// full text search enable
-		delete_option('fulltext_disable');
+		delete_option('fulltext_disabled');
 		return $wp_query;
 	}
 	
 	public function on_fulltext_disable_query($wp_query){
-		update_option('fulltext_disable', true);
+		delete_option('just_created_site');
+		update_option('fulltext_disabled', true);
 		return $wp_query;
 	}
 	
@@ -1326,17 +1339,20 @@ class WCISPlugin {
 	
 	// highlighting title/content/tags/excerpt according to the search terms
 	function highlight_result_handler($current_text){
-		if (is_search() && in_the_loop() && !get_option('wcis_disable_highlight') && !get_option('fulltext_disable')){
+		if (is_search() && in_the_loop() && get_option('wcis_enable_highlight') && (get_option('fulltext_disabled') == false)){
 			global $wp_query;
 			$query = $wp_query->query_vars;
-			$search_terms = explode(' ', $query['s']);
+			
+			$search_terms = preg_replace('!\s+!', ' ', $query['s']);
+			$search_terms = explode(' ', $search_terms);
 			
 			foreach ($search_terms as $term){
 				$current_text = preg_replace('/(' . $term . ')/i',
 						'<span class="wcis_isp_marked_word">$1</span>',
 						$current_text
 				);
-			}		
+			}
+
 			$current_text = '<span class="wcis_isp_text_content">' .  $current_text . '</span>';
 		}
 		
