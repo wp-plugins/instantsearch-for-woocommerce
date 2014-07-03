@@ -437,18 +437,32 @@ class WCISPlugin {
         }
     }
     
-    private static function query_products($page = 1) {
-		// set base query arguments
-		$query_args = array(
-			'fields'      => 'ids',
-			'post_type'   => 'product',
-			'post_status' => 'publish',
-			//'post_parent' => 0,
-            'posts_per_page' => get_option( 'wcis_batch_size' ), 
-			'meta_query' => array(),
-            'paged' => $page,
-			'suppress_filters' => true
-		);
+    private function query_products($page = 1) {
+    	include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+    	if(is_plugin_active('woocommerce-multilingual/wpml-woocommerce.php')){
+			// set base query arguments for multi-language site
+			$query_args = array(
+				'fields'      => 'ids',
+				'post_type'   => 'product',
+				'post_status' => 'publish',
+				//'post_parent' => 0,
+	            'posts_per_page' => get_option( 'wcis_batch_size' ), 
+				'meta_query' => array(),
+	            'paged' => $page,
+				'suppress_filters' => true
+			);
+    	} else {
+    		// set base query arguments
+    		$query_args = array(
+    			'fields'      => 'ids',
+    			'post_type'   => 'product',
+    			'post_status' => 'publish',
+    			//'post_parent' => 0,
+    			'posts_per_page' => get_option( 'wcis_batch_size' ),
+    			'meta_query' => array(),
+    			'paged' => $page,
+    		);    		
+    	}
 
 		return new WP_Query( $query_args );
 	}
@@ -561,7 +575,7 @@ class WCISPlugin {
         }
     }
     
-    private static function puch_wc_batch($batch_num){
+    private function puch_wc_batch($batch_num){
     	$loop = self::query_products($batch_num);
     	$product_array = array();
     	$total       = $loop->found_posts;		// total number of products
