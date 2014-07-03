@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.17';
+	const VERSION = '1.0.18';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -447,6 +447,7 @@ class WCISPlugin {
             'posts_per_page' => get_option( 'wcis_batch_size' ), 
 			'meta_query' => array(),
             'paged' => $page,
+			'suppress_filters' => true
 		);
 
 		return new WP_Query( $query_args );
