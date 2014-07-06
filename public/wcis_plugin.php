@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.18';
+	const VERSION = '1.0.19';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -386,7 +386,7 @@ class WCISPlugin {
             	$update_product_timeframe = $response_json->{'wcis_timeframe'};
             	update_option('wcis_timeframe', $update_product_timeframe);
             	
-            	// TODO: experimented
+            	// TODO: temporary
             	update_option('do_not_send_retries', true);
 	            	
 			} catch (Exception $e){
@@ -599,7 +599,7 @@ class WCISPlugin {
     }
     
     
-    private static function get_product_from_post($post_id)
+    private function get_product_from_post($post_id)
     {
     	$woocommerce_ver_below_2_1 = false;
     	if ( version_compare( WOOCOMMERCE_VERSION, '2.1', '<' ) )
@@ -669,7 +669,16 @@ class WCISPlugin {
     		$send_product['price_min_compare_at_price'] = null;
     		$send_product['price_max_compare_at_price'] = null;
     	}
-        
+    	
+    	$send_product['description'] = self::content_filter_shortcode_with_content($send_product['description']);
+    	$send_product['short_description'] = self::content_filter_shortcode_with_content($send_product['short_description']);
+    	
+    	$send_product['description'] = self::content_filter_shortcode($send_product['description']);
+    	$send_product['short_description'] = self::content_filter_shortcode($send_product['short_description']);
+		
+// 		$str = preg_replace( '|\[(.+?)\](.+?\[/\\1\])?|s', '', $str);
+// 		$str = preg_replace ('/\[accordion[^\]]*\](.*?)\[\/accordion\]/', '$1', $str);
+
         return $send_product;
     }
     
@@ -992,6 +1001,8 @@ class WCISPlugin {
         else
         	$is_admin_bar_showing = "is_admin_bar_showing=0&";
         $args .= $is_admin_bar_showing;
+        
+        $args .= "products_per_page=" . (string)get_option('posts_per_page') . "&";
         if ($product)
         {
             $args .= 'product_url=' . get_permalink() .'&';
@@ -1099,6 +1110,11 @@ class WCISPlugin {
 					update_option('wcis_enable_highlight', true);
 				else
 					delete_option('wcis_enable_highlight');
+			} elseif ($req->query_vars['instantsearchplus'] == 'disable_shortcode_filter'){
+				if (get_option('wcis_disable_shortcode_filter') == false)
+					update_option('wcis_disable_shortcode_filter', true);
+				else
+					delete_option('wcis_disable_shortcode_filter');
 			}
 			
 		}
@@ -1432,5 +1448,30 @@ class WCISPlugin {
 		}
 		update_option('wcis_timeframe', $new_timeframe);
 	}
+	
+	function content_filter_shortcode($content){
+		if (get_option('wcis_disable_shortcode_filter'))
+			return $content;
+		global $shortcode_tags;
+		if ($content != ''){
+			foreach ($shortcode_tags as $shortcode_name => $shortcode_function){
+				$content = preg_replace ('/\['. (string)$shortcode_name .'[^\]]*\](.*?)\[\/'. (string)$shortcode_name .'\]/', '$1', $content);
+			}				 
+		}
+		return $content;
+	}
+	
+	function content_filter_shortcode_with_content($content){
+		if (get_option('wcis_disable_shortcode_filter'))
+			return $content;
+		$const_shortcode = array("php", "insert_php");
+		if ($content != ''){
+			foreach ($const_shortcode as $filter){
+				$content = preg_replace ('/\['. (string)$filter .'[^\]]*\](.*?)\[\/'. (string)$filter .'\]/', '', $content);
+			}
+		}
+		return $content;
+	}
+	
 }
 ?>
