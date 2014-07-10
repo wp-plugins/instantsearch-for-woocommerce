@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.19';
+	const VERSION = '1.0.20';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -993,7 +993,7 @@ class WCISPlugin {
 // 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
         global $product;
         $script_url = 'https://acp-magento.appspot.com/js/acp-magento.js';
-        $args = "?mode=woocommerce&";
+        $args = "mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
         if (is_admin_bar_showing())
@@ -1009,16 +1009,38 @@ class WCISPlugin {
             $args .= $product;
         }
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
-						
-		if (get_option('fulltext_disabled') == false){
-	        if (is_search() && get_option('just_created_site')){
-	        	$full_text_script = 'https://acp-magento.appspot.com/js/wcis-results.js?just_created_site=true&' . $is_admin_bar_showing;
-	        	wp_enqueue_script( $this->plugin_slug . '-fulltext', $full_text_script, array('jquery'), self::VERSION );
-	        } elseif(is_search() && get_option('wcis_enable_highlight')) {
-	        	$full_text_script = 'https://acp-magento.appspot.com/js/wcis-results.js';
-	        	wp_enqueue_script( $this->plugin_slug . '-fulltext', $full_text_script, array('jquery'), self::VERSION );
+
+        if (is_search() && get_option('fulltext_disabled') == false){
+        	$script_url = 'https://acp-magento.appspot.com/js/wcis-results.js';
+	        $args = $is_admin_bar_showing;
+	        
+	        if (get_option('just_created_site')){
+	        	$args .= 'just_created_site=true&';
+	        }else if (get_option('wcis_did_you_mean_enabled') && get_option('wcis_did_you_mean_fields')){
+	        	// did you mean inject
+	        	$args .= 'did_you_mean_enabled=true&';
+
+				$did_you_mean_fields = get_option('wcis_did_you_mean_fields');
+				if (array_key_exists('alternative_terms', $did_you_mean_fields)){
+		        	$alternative_terms_arr = $did_you_mean_fields['alternative_terms'];
+		        	
+			        $did_you_mean_patams = '';
+			        for ($i = 0; $i < count($alternative_terms_arr); $i++)
+			        	$did_you_mean_patams .=  'did_you_mean_term' . (string)$i . '=' . urlencode($alternative_terms_arr[$i]) . '&';
+			        
+			        if ($did_you_mean_patams != '')
+			        	$args .= $did_you_mean_patams . '&';
+				}
+				if (array_key_exists('original_query', $did_you_mean_fields) && array_key_exists('fixed_query', $did_you_mean_fields)){
+					$args .= 'original_query=' . urlencode($did_you_mean_fields['original_query']) . '&';
+					$args .= 'fixed_query=' . urlencode($did_you_mean_fields['fixed_query']) . '&';
+				}
+				// clearing did you mean parameters from data base
+				delete_option('wcis_did_you_mean_enabled');
+				delete_option('wcis_did_you_mean_fields');
 	        }
-		}
+	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
+        }
 	}
 	
 	
@@ -1230,22 +1252,20 @@ class WCISPlugin {
 			$query = $wp_query->query_vars;
 			$url_args = add_query_arg(null, null);
 			
+			delete_option('wcis_did_you_mean_enabled');
+			delete_option('wcis_did_you_mean_fields');
+			
 			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false)
 				return self::on_fulltext_disable_query($wp_query);
 
 			if (strpos($url_args, 'orderby=') !== false)
 				return self::on_fulltext_disable_query($wp_query);
 			
-
-			if (isset($query['s']) ) 
-				$q = $query['s'];
-			else
-				$q = get_search_query();
+			$q = (isset($query['s'])) ? $query['s'] : get_search_query();
+			// cleaning search query from '\'
+			$q = str_replace('\\', '', $q);
 			
-			if ($query['paged'] == 0)
-				$page_num = 1;
-			else 
-				$page_num = $query['paged'];
+			$page_num = ($query['paged'] == 0) ? 1 : $query['paged'];
 			
 			$results_per_page = get_option('posts_per_page');
 			
@@ -1254,7 +1274,7 @@ class WCISPlugin {
 					'body' => array('s' 					=> get_option('siteurl'),
 									'h' 					=> get_option('siteurl'),	
 									'UUID' 					=> get_option( 'wcis_site_id' ),
-									'q' 					=> get_search_query(),
+									'q'						=> $q,
 									'v' 					=> self::VERSION,
 									'store_id' 				=> get_current_blog_id(),
 									'p' 					=> $page_num,				// requested page number
@@ -1283,7 +1303,18 @@ class WCISPlugin {
 					update_option('just_created_site', true);
 					delete_option('fulltext_disabled');
 					return $wp_query;
-				} elseif (get_option('just_created_site'))
+				} elseif ((array_key_exists('alternatives', $response_json) && 
+						   			count($response_json['alternatives']) > 0) || 
+						  (array_key_exists('results_for', $response_json) &&
+						  		$response_json['results_for'] != null  &&
+						  		$response_json['results_for'] != '' &&
+								!self::did_you_mean_is_same_words($q, $response_json['results_for'])) 
+					){
+					// if there are alternatives(did you mean) or search query not equals to "result for query" (typo)  
+					update_option('wcis_did_you_mean_enabled', true);
+				}
+				
+				if (get_option('just_created_site'))
 					delete_option('just_created_site');
 
 				$product_ids = array();
@@ -1299,6 +1330,12 @@ class WCISPlugin {
 					update_option('wcis_total_results', $response_json['total_results']);
 				else
 					update_option('wcis_total_results', -1);
+				
+				// did you mean section
+				$wp_query->query_vars['s'] = $q;
+				if (get_option('wcis_did_you_mean_enabled'))
+					self::handle_did_you_mean_result($response_json);
+				
 			}
 					
 		} else {
@@ -1317,6 +1354,42 @@ class WCISPlugin {
 		update_option('fulltext_disabled', true);
 		return $wp_query;
 	}
+	
+	public function handle_did_you_mean_result($response_json){
+		global $wp_query;
+		$did_you_mean_fields = array();
+		// if original search query is different from the result's query
+		if (array_key_exists('results_for', $response_json) && 
+				!self::did_you_mean_is_same_words($wp_query->query_vars['s'], 
+												  $response_json['results_for'])){
+
+			update_option('wcis_results_for', $response_json['results_for']);
+			$did_you_mean_fields['original_query'] = $wp_query->query_vars['s'];
+			$wp_query->query_vars['s'] = $response_json['results_for'];
+			$did_you_mean_fields['fixed_query'] = $response_json['results_for'];
+		} 
+		if (array_key_exists('alternatives', $response_json) && (count($response_json['alternatives']) > 0)){
+			$alternative_terms = array();
+			foreach($response_json['alternatives'] as $term)
+				$alternative_terms[] = $term;
+			$did_you_mean_fields['alternative_terms'] = $alternative_terms;
+		}
+		
+		update_option('wcis_did_you_mean_fields', $did_you_mean_fields);
+	}
+	
+	public function did_you_mean_is_same_words($original, $fixed){
+		if (($original == $fixed) ||
+			($fixed == null)	  ||
+			($fixed == '')		  || 		
+			(str_replace('\\', '', $original) == str_replace('\\', '', $fixed)) ||
+			(strcasecmp($original, $fixed) == 0)		// case-insensitive comparison
+		)
+			return true;
+		
+		return false;
+	}
+	
 	
 	public function posts_search_handler($search){
 		if( is_search() && !is_admin() && get_option('wcis_fulltext_ids')){
@@ -1452,12 +1525,18 @@ class WCISPlugin {
 	function content_filter_shortcode($content){
 		if (get_option('wcis_disable_shortcode_filter'))
 			return $content;
-		global $shortcode_tags;
-		if ($content != ''){
-			foreach ($shortcode_tags as $shortcode_name => $shortcode_function){
-				$content = preg_replace ('/\['. (string)$shortcode_name .'[^\]]*\](.*?)\[\/'. (string)$shortcode_name .'\]/', '$1', $content);
-			}				 
+		
+		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/';
+		while(preg_match($pattern, $content)){
+			$content = preg_replace($pattern, '$2', $content);
 		}
+
+// 		global $shortcode_tags;
+// 		if ($content != ''){
+// 			foreach ($shortcode_tags as $shortcode_name => $shortcode_function){
+// 				$content = preg_replace ('/\['. (string)$shortcode_name .'[^\]]*\](.*?)\[\/'. (string)$shortcode_name .'\]/', '$1', $content);
+// 			}				 
+// 		}
 		return $content;
 	}
 	
