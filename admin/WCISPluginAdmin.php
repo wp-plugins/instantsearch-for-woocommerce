@@ -205,7 +205,7 @@ class WCISPluginAdmin {
 
 		WCISPlugin::get_instance()->check_for_alerts(true);
 		
-        $wc_admin_url = 'https://acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' );
+        $wc_admin_url = 'https://acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&v=' . WCISPlugin::VERSION;
 	    include_once( 'views/admin.php' );
 	}
 
