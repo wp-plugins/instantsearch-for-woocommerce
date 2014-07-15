@@ -17,7 +17,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.0.20';
+	const VERSION = '1.1.0';
 	
 	const RETRIES_LIMIT = 3;
 	
@@ -338,12 +338,13 @@ class WCISPlugin {
             // end multisite
             
         $args = array(
-        	'body' => array('site' => get_option('siteurl'), 
-        				'email' => get_option( 'admin_email' ), 
-        				'product_count' => wp_count_posts('product')->publish,
-        				'store_id' => get_current_blog_id(),
-        				'is_multisite'	=> $is_multisite_on,
-        				'multisite_info'	=> $json_multisite
+        	'body' => array('site' 			=> get_option('siteurl'), 
+        				'email' 			=> get_option( 'admin_email' ), 
+        				'product_count' 	=> wp_count_posts('product')->publish,
+        				'store_id' 			=> get_current_blog_id(),
+        				'is_multisite'		=> $is_multisite_on,
+        				'multisite_info'	=> $json_multisite,
+        				'version'			=> self::VERSION
         	)		
         );
             
@@ -1038,7 +1039,11 @@ class WCISPlugin {
 				// clearing did you mean parameters from data base
 				delete_option('wcis_did_you_mean_enabled');
 				delete_option('wcis_did_you_mean_fields');
+	        } else if (get_option('wcis_search_query')){
+	        	$args .= 'original_query=' . urlencode(get_option('wcis_search_query')) . '&';
 	        }
+	        delete_option('wcis_search_query');
+	        
 	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
         }
 	}
@@ -1254,6 +1259,7 @@ class WCISPlugin {
 			
 			delete_option('wcis_did_you_mean_enabled');
 			delete_option('wcis_did_you_mean_fields');
+			delete_option('wcis_search_query');
 			
 			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false)
 				return self::on_fulltext_disable_query($wp_query);
@@ -1283,8 +1289,8 @@ class WCISPlugin {
 					),
 					'timeout' => 20,
 			);
-			
 			$resp = wp_remote_post( $url, $args );
+			
 			if (is_wp_error($resp) || $resp['response']['code'] != 200){				
 				$err_msg = "/wc_search request failed is_retry: " . $is_retry;
 				self::send_error_report($err_msg);
@@ -1335,6 +1341,8 @@ class WCISPlugin {
 				$wp_query->query_vars['s'] = $q;
 				if (get_option('wcis_did_you_mean_enabled'))
 					self::handle_did_you_mean_result($response_json);
+				else 
+					update_option("wcis_search_query", $wp_query->query_vars['s']);
 				
 			}
 					
@@ -1526,7 +1534,7 @@ class WCISPlugin {
 		if (get_option('wcis_disable_shortcode_filter'))
 			return $content;
 		
-		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/';
+		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/s';
 		while(preg_match($pattern, $content)){
 			$content = preg_replace($pattern, '$2', $content);
 		}
