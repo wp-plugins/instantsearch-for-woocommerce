@@ -12,15 +12,13 @@
  * Version:           1.1.0
  * Author:            Fast Simon Inc
  * Author URI:        www.instantsearchplus.com
- * Text Domain:       plugin-name-locale
+ * Text Domain:       WCISPlugin
  * License:           GPL-2.0+
  * Domain Path:       /languages
   */
 
-// If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
-}
+if ( ! defined( 'ABSPATH' ) )
+	exit; // Exit if accessed directly
 
 /*----------------------------------------------------------------------------*
  * Public-Facing Functionality
@@ -28,15 +26,10 @@ if ( ! defined( 'WPINC' ) ) {
 
 require_once( plugin_dir_path( __FILE__ ) . 'public/wcis_plugin.php' );
 
-
-register_activation_hook( __FILE__, array( 'WCISPlugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'WCISPlugin', 'deactivate' ) );
+register_activation_hook( __FILE__, array( WCISPlugin::get_instance(), 'activate' ) );
+register_deactivation_hook( __FILE__, array( WCISPlugin::get_instance(), 'deactivate' ) );
 
 register_uninstall_hook( __FILE__, array( 'WCISPlugin', 'uninstall' ) );
-
-
-
-add_action( 'plugins_loaded', array( 'WCISPlugin', 'get_instance' ) );
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( 'WCISPlugin', 'wcis_add_action_links'));
 
