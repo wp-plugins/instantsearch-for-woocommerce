@@ -9,6 +9,9 @@
  * @copyright 2014 InstantSearchPlus
  */
 
+if ( ! defined( 'ABSPATH' ) )
+	exit; // Exit if accessed directly
+
 /**
  * Plugin class. This class should ideally be used to work with the
  * administrative side of the WordPress site.
