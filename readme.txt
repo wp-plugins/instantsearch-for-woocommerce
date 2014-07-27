@@ -93,7 +93,7 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 = 1.2.0 = 
 * WooCommerce integration
-* damin notice after install
+* admin notice after install
 
 = 1.1.1 = 
 * fix - security issues
