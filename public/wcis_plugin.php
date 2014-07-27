@@ -22,9 +22,6 @@ class WCISPlugin {
 
 	const VERSION = '1.1.1';
 	
-	// const flag - if WooCommecrce source -> true, else -> false
-	const IS_WOOCOMMERCE_SOURCE = false;
-	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				= 1200; 	// -> 20 minutes
 	const CRON_EXECUTION_TIME 				= 900; 		// -> 15 minutes
@@ -103,6 +100,11 @@ class WCISPlugin {
         
         // admin message     
         add_action('admin_notices',  array( $this, 'show_admin_message'));
+        add_action('admin_init', array( $this, 'admin_init_handler'));
+        
+        // WooCommerce Integration
+        add_filter( 'woocommerce_integrations', array( $this, 'add_woocommerce_integrations_handler' ) );
+        
 	}
 
 	/**
@@ -117,13 +119,20 @@ class WCISPlugin {
 	}
 	
 	public static function wcis_add_action_links( $links ) {				
+		$url = 'https://acp-magento.appspot.com/wc_dashboard';
+		$params = '?site_id=' . get_option( 'wcis_site_id' );
+		$params .= '&authentication_key=' . get_option('authentication_key');
+		$params .= '&new_tab=1';
+		$params .= '&v=' . WCISPlugin::VERSION;
+				
 		return array_merge(
-			array(
-				'settings' => '<a href="' . admin_url( '?page=' . WCISPlugin::get_instance()->get_plugin_slug() ) . '">' .
-					 __( 'Settings', WCISPlugin::get_instance()->get_plugin_slug() ) . '</a>'
-			),
-			$links
+				array(
+						'Settings' => '<a href="' . $url . $params . '" target="_blank">'. 
+							__( 'Settings', WCISPlugin::get_instance()->get_plugin_slug() ) .'</a>'
+				),
+				$links
 		);
+		
 	}
 
 	/**
@@ -155,9 +164,6 @@ class WCISPlugin {
 	 */
 	public function activate( $network_wide )
 	{			
-		$err_msg = "activate function triggered";
-		self::send_error_report($err_msg);
-		
 		self::single_activate();
 		
 // 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
@@ -234,8 +240,9 @@ class WCISPlugin {
 	 *                                       deactivated on an individual blog.
 	 */
 	public static function uninstall( $network_wide ) {		
-		if ( ! current_user_can( 'activate_plugins' ) )
+		if ( ! current_user_can( 'activate_plugins' ) ){
 			return;
+		}
 	
 		$url = self::SERVER_URL . 'wc_update_site_state';
 		
@@ -274,8 +281,9 @@ class WCISPlugin {
 	 */
 	public function activate_new_site( $blog_id ) {
 
-		if ( 1 !== did_action( 'wpmu_new_blog' ) ) 
+		if ( 1 !== did_action( 'wpmu_new_blog' ) ) {
 			return;
+		}
 		
 		$err_msg = "activate_new_site triggered";
 		self::send_error_report($err_msg);
@@ -291,12 +299,15 @@ class WCISPlugin {
 	 * @since    1.0.0
 	 */
 	private function single_activate($is_retry = false) {
-		if (get_option('is_activation_triggered'))
+		if (get_option('is_activation_triggered')){
 			return;
+		}
 		update_option('is_activation_triggered', true);
+		update_option('wcis_just_created_alert', true);
 				
-		if (!wp_next_scheduled( 'instantsearchplus_cron_check_alerst' ))	
+		if (!wp_next_scheduled( 'instantsearchplus_cron_check_alerst' )){	
 			wp_schedule_event(time(), 'daily', 'instantsearchplus_cron_check_alerst');
+		}
 		
 		$url = self::SERVER_URL . 'wc_install';  
 		$multisite_array = array();
@@ -324,10 +335,11 @@ class WCISPlugin {
 	            }
 	            restore_current_blog();
 			}
-	        if (function_exists( 'is_multisite' ) && is_multisite())
+	        if (function_exists( 'is_multisite' ) && is_multisite()){
 	        	$is_multisite_on = true;
-	        else
+	        } else {
 	        	$is_multisite_on = false;
+	        }
 	
 	        $json_multisite = json_encode($multisite_array);
 		} catch (Exception $e){
@@ -342,8 +354,7 @@ class WCISPlugin {
         				'store_id' 			=> get_current_blog_id(),
         				'is_multisite'		=> $is_multisite_on,
         				'multisite_info'	=> $json_multisite,
-        				'version'			=> self::VERSION, 
-        				'woocommerce_source'=> self::IS_WOOCOMMERCE_SOURCE
+        				'version'			=> self::VERSION,
         	)		
         );
             
@@ -353,13 +364,15 @@ class WCISPlugin {
         {             	
         	$err_msg = "install req returned with an error code, sending retry install request: " . $is_retry;
         	try{
-            	if (is_wp_error($resp))
+            	if (is_wp_error($resp)){
             		$err_msg = $err_msg . " - error msg: " . $resp->get_error_message();
+            	}
         	} catch (Exception $e) {}
             	
         	self::send_error_report($err_msg);
-       		if (!$is_retry)
+       		if (!$is_retry){
             	self::single_activate(true);
+       		}
 
         } else {	// $resp['response']['code'] == 200
             	// the server returns site id in the body of the response, save it in the options
@@ -368,8 +381,9 @@ class WCISPlugin {
 	        	if ($response_json == Null){
 	            	$err_msg = "After install json_decode returned null";
 	            	self::send_error_report($err_msg);
-	            	if (!$is_retry)
+	            	if (!$is_retry){
 	            		self::single_activate(true);
+	            	}
 	            	return;
 	            }
 
@@ -492,8 +506,7 @@ class WCISPlugin {
 		            	self::send_error_report($err_msg);
 		            }
 		            
-		            while ($page <= $total_pages)
-		            {
+		            while ($page <= $total_pages){
 		            	if (get_option('wcis_logging')){
 		            		$err_msg = "preparing page: " . $page;
 		            		self::send_error_report($err_msg);
@@ -509,9 +522,10 @@ class WCISPlugin {
 		            		self::send_error_report($err_msg);
 		            	}
 		                
-		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches)
+		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches){
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
 		                	$is_additional_fetch_required = true;
+		                }
 		                
 		                $send_products = array(
 		                		'total_pages' 				   	=> $total_pages, 
@@ -535,8 +549,9 @@ class WCISPlugin {
 		                $page = $page + 1;
 		                
 		                // too many products on activation, will get the rest of the products, by server request, after the activation is done
-		                if ($is_additional_fetch_required)
+		                if ($is_additional_fetch_required){
 		                	break;
+		                }
 		                
 		                $loop = self::query_products($page);
 		            }
@@ -550,10 +565,11 @@ class WCISPlugin {
 	        	// alternative way  
 	        	try{
 		        	include_once( ABSPATH . 'wp-admin/includes/plugin.php' ); 
-		        	if (is_plugin_active( 'woocommerce/woocommerce.php'))
+		        	if (is_plugin_active( 'woocommerce/woocommerce.php')){
 		        		$is_woo = 'true';
-		        	else 
+		        	} else { 
 		        		$is_woo = 'false';
+		        	}
 	        	} catch (Exception $e){
 	        		$is_woo = 'false (Exception)';
 	        	}
@@ -572,8 +588,7 @@ class WCISPlugin {
     	$product_array = array();
     	$total       = $loop->found_posts;		// total number of products
     	$total_pages = $loop->max_num_pages;	// total number of batches
-    	while ( $loop->have_posts() )
-    	{
+    	while ( $loop->have_posts() ){
     		$loop->the_post();
     		$product = self::get_product_from_post(get_the_ID());
     		$product_array[] = $product;
@@ -594,8 +609,9 @@ class WCISPlugin {
     private function get_product_from_post($post_id)
     {
     	$woocommerce_ver_below_2_1 = false;
-    	if ( version_compare( WOOCOMMERCE_VERSION, '2.1', '<' ) )
+    	if ( version_compare( WOOCOMMERCE_VERSION, '2.1', '<' ) ){
     		$woocommerce_ver_below_2_1 = true;
+    	}
 
     	if ($woocommerce_ver_below_2_1){
     		$product = 	new WC_Product_Simple($post_id);
@@ -607,8 +623,7 @@ class WCISPlugin {
         //$categories = get_the_category();
 
     	$thumbnail = $product->get_image();    	
-    	if ($thumbnail)
-    	{
+    	if ($thumbnail){
     		preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
     		$thumbnail = array_pop($result);
     	}
@@ -674,17 +689,19 @@ class WCISPlugin {
 
     public function on_product_save($post_id){
     	$post = get_post( $post_id );
-    	if ( 'product' !=  $post->post_type || get_post_status($post_id) == 'trash')
+    	if ( 'product' !=  $post->post_type || get_post_status($post_id) == 'trash'){
     		return;
+    	}
     	$action = 'insert';
  
     	$products_list = get_option('cron_product_list');
     	$timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
     	
-    	if(get_option('wcis_timeframe'))
+    	if(get_option('wcis_timeframe')){
     		$timeframe = get_option('wcis_timeframe');
-    	else 
+    	} else { 
     		$timeframe = self::CRON_EXECUTION_TIME;
+    	}
     	
 		if ($timestamp != false){	// event already scheduled
 			if ($products_list){	// if there is at least one product in the list
@@ -767,12 +784,9 @@ class WCISPlugin {
 
         $form_data = $_POST;
         $original_post_status = $form_data['original_post_status'];
-        if ($original_post_status == 'publish')
-        {
+        if ($original_post_status == 'publish'){
             $action = 'update';
-        }
-        else
-        {
+        } else {
             $action = 'insert';
         }
         
@@ -796,10 +810,11 @@ class WCISPlugin {
     	$product_chunks 				= $products['products'];   	
     	$is_additional_fetch_required 	= $products['is_additional_fetch_required'];
     	
-    	if ($total_products == 0)
+    	if ($total_products == 0){
     		$batch_number = 0;
-    	else
+    	} else {
     		$batch_number = $products['current_page'];
+    	}
     	
     	$json_products = json_encode($product_chunks);
     	
@@ -823,8 +838,9 @@ class WCISPlugin {
     	if (is_wp_error($resp) || $resp['response']['code'] != 200){
     		$err_msg = "send_products_batch request failed batch: " . $batch_number;  
     		self::send_error_report($err_msg);
-    		if (!$is_retry)
+    		if (!$is_retry){
     			self::send_products_batch($products, true);
+    		}
     	} else {
     		update_option('is_out_of_sync', false);
     		update_option('is_out_of_sync_all_products', false);
@@ -896,8 +912,8 @@ class WCISPlugin {
 		$domain = $this->plugin_slug;
 		$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
 
-		load_textdomain( $domain, trailingslashit( WP_LANG_DIR ) . $domain . '/' . $domain . '-' . $locale . '.mo' );
-		load_plugin_textdomain( $domain, FALSE, basename( plugin_dir_path( dirname( __FILE__ ) ) ) . '/languages/' );
+		load_textdomain( 'WCISPlugin', plugin_dir_path( dirname( __FILE__ ) ) . 'languages/' . $domain . '-' . $locale . '.mo' );
+		load_plugin_textdomain( 'WCISPlugin', FALSE, basename( plugin_dir_path( dirname( __FILE__ ) ) ) . '/languages/' );
 
 	}
 
@@ -922,15 +938,15 @@ class WCISPlugin {
         $args = "mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
-        if (is_admin_bar_showing())
+        if (is_admin_bar_showing()){
         	$is_admin_bar_showing = "is_admin_bar_showing=1&";
-        else
+        } else {
         	$is_admin_bar_showing = "is_admin_bar_showing=0&";
+        }
         $args .= $is_admin_bar_showing;
         
         $args .= "products_per_page=" . (string)get_option('posts_per_page') . "&";
-        if ($product)
-        {
+        if ($product){
             $args .= 'product_url=' . get_permalink() .'&';
             $args .= $product;
         }
@@ -951,11 +967,13 @@ class WCISPlugin {
 		        	$alternative_terms_arr = $did_you_mean_fields['alternative_terms'];
 		        	
 			        $did_you_mean_patams = '';
-			        for ($i = 0; $i < count($alternative_terms_arr); $i++)
+			        for ($i = 0; $i < count($alternative_terms_arr); $i++){
 			        	$did_you_mean_patams .=  'did_you_mean_term' . (string)$i . '=' . urlencode($alternative_terms_arr[$i]) . '&';
+			        }
 			        
-			        if ($did_you_mean_patams != '')
+			        if ($did_you_mean_patams != ''){
 			        	$args .= $did_you_mean_patams . '&';
+			        }
 				}
 				if (array_key_exists('original_query', $did_you_mean_fields) && array_key_exists('fixed_query', $did_you_mean_fields)){
 					$args .= 'original_query=' . urlencode($did_you_mean_fields['original_query']) . '&';
@@ -983,27 +1001,31 @@ class WCISPlugin {
 	function process_instantsearchplus_request($req){
 		if (array_key_exists('instantsearchplus', $req->query_vars)){
 			if ($req->query_vars['instantsearchplus'] == 'version'){
-				if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) )
+				if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ){
 					$woocommerce_exists = true;
-				else 
+				} else { 
 					$woocommerce_exists = false;
+				}
 				try {
-					if ( ! function_exists( 'get_plugins' ) )
+					if ( ! function_exists( 'get_plugins' ) ){
 						require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+					}
 					$plugin_folder = get_plugins( '/' . 'woocommerce' );
 					$plugin_file = 'woocommerce.php';
-					if ( isset( $plugin_folder[$plugin_file]['Version'] ) )
+					if ( isset( $plugin_folder[$plugin_file]['Version'] ) ){
 						$wooVer = $plugin_folder[$plugin_file]['Version'];
-					else
+					} else {
 						$wooVer = 'NULL';
+					}
 				} catch (Exception $e) {
 					$wooVer = 'Error - could not get WooCommerce version';
 				}
 				
-				if ( function_exists( 'is_multisite' ) && is_multisite() )
+				if ( function_exists( 'is_multisite' ) && is_multisite() ){
 					$is_multisite = "multisite";
-				else 
+				} else { 
 					$is_multisite = "not multisite";
+				}
 				
 				$response = array(
 						'wordpress_version' 	=> get_bloginfo('version'),
@@ -1016,7 +1038,6 @@ class WCISPlugin {
 						'req_status'			=> 'OK',
 						'woocommerce_exists'	=> $woocommerce_exists,
 						'is_multisite'			=> $is_multisite,
-						'woocommerce_source'	=> self::IS_WOOCOMMERCE_SOURCE
 				);
 				exit(json_encode($response));
 				
@@ -1040,34 +1061,33 @@ class WCISPlugin {
 				$timeframe = $req->query_vars['instantsearchplus_parameter'];
 				self::update_timeframe($timeframe);
 				exit();
-			} elseif ($req->query_vars['instantsearchplus'] == 'remove_admin_message'){
-				delete_option('wcic_site_alert');
+			} elseif ($req->query_vars['instantsearchplus'] == 'remove_admin_alerts'){
+				delete_option('remove_over_capacity_alert');
+				delete_option('remove_just_created_alert');
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
 				self::check_for_alerts();
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'change_logging_status'){
-				if (!get_option('wcis_logging'))
+				if (!get_option('wcis_logging')) {
 					update_option('wcis_logging', true);
-				else
+				} else {
 					delete_option('wcis_logging');
+				}
 				
-				if (get_option('wcis_logging'))
+				if (get_option('wcis_logging')) {
 					$err_msg = "logging request - logging turned ON!";
-				else
+				} else {
 					$err_msg = "logging request - logging turned OFF!";
+				}
 				self::send_error_report($err_msg);
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'disable_highlight'){
-				if (get_option('wcis_enable_highlight') == false)
+				if (get_option('wcis_enable_highlight') == false){
 					update_option('wcis_enable_highlight', true);
-				else
+				} else {
 					delete_option('wcis_enable_highlight');
-			} elseif ($req->query_vars['instantsearchplus'] == 'disable_shortcode_filter'){
-				if (get_option('wcis_disable_shortcode_filter') == false)
-					update_option('wcis_disable_shortcode_filter', true);
-				else
-					delete_option('wcis_disable_shortcode_filter');
+				}
 			}
 			
 		}
@@ -1132,9 +1152,6 @@ class WCISPlugin {
 		$total_num_of_products = count($products_list);
 		$total_num_of_batches = ceil($total_num_of_products / $batch_size);
 		$iteration = 1;
-		
-// 		$err_msg = "in send_cron_products_as_batch num of batches: " . $total_num_of_batches . ", total_products: " . $total_num_of_products;
-// 		self::send_error_report($err_msg);
 		
 		foreach ($products_list as $key => $product_node)
 		{
@@ -1218,11 +1235,13 @@ class WCISPlugin {
 			delete_option('wcis_did_you_mean_fields');
 			delete_option('wcis_search_query');
 			
-			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false)
+			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false){
 				return self::on_fulltext_disable_query($wp_query);
+			}
 
-			if (strpos($url_args, 'orderby=') !== false)
+			if (strpos($url_args, 'orderby=') !== false){
 				return self::on_fulltext_disable_query($wp_query);
+			}
 			
 			$q = (isset($query['s'])) ? $query['s'] : get_search_query();
 			// cleaning search query from '\'
@@ -1243,7 +1262,7 @@ class WCISPlugin {
 									'store_id' 				=> get_current_blog_id(),
 									'p' 					=> $page_num,				// requested page number
 									'products_per_page'		=> $results_per_page,
-									'is_admin_view'			=> is_admin_bar_showing()
+									'is_admin_view'			=> is_admin_bar_showing()			
 					),
 					'timeout' => 20,
 			);
@@ -1253,10 +1272,11 @@ class WCISPlugin {
 				$err_msg = "/wc_search request failed is_retry: " . $is_retry;
 				self::send_error_report($err_msg);
 				
-				if (!$is_retry)
+				if (!$is_retry){
 					self::pre_get_posts_handler( $wp_query, true);
-				else
+				} else {
 					return self::on_fulltext_disable_query($wp_query);
+				}
 								
 			} else {				
 				$response_json = json_decode($resp['body'], true);
@@ -1278,37 +1298,43 @@ class WCISPlugin {
 					update_option('wcis_did_you_mean_enabled', true);
 				}
 				
-				if (get_option('just_created_site'))
+				if (get_option('just_created_site')){
 					delete_option('just_created_site');
+				}
 
 				$product_ids = array();
 
-				if (array_key_exists('id_list', $response_json))
-					foreach ($response_json['id_list'] as $product_id)
+				if (array_key_exists('id_list', $response_json)){
+					foreach ($response_json['id_list'] as $product_id){
 						$product_ids[] = $product_id;
-				else
+					}
+				} else {
 					return self::on_fulltext_disable_query($wp_query);
+				}
 					
 				update_option('wcis_fulltext_ids', $product_ids);
-				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0)
+				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0){
 					update_option('wcis_total_results', $response_json['total_results']);
-				else
+				} else {
 					update_option('wcis_total_results', -1);
+				}
 				
 				// did you mean section
 				$wp_query->query_vars['s'] = $q;
-				if (get_option('wcis_did_you_mean_enabled'))
+				if (get_option('wcis_did_you_mean_enabled')){
 					self::handle_did_you_mean_result($response_json);
-				else 
+				} else { 
 					update_option("wcis_search_query", $wp_query->query_vars['s']);
+				}
 				
 			}
 					
 		} else {
-			if (is_search() && !is_admin())
+			if (is_search() && !is_admin()){
 				return $wp_query;
-			else
+			} else {
 				return self::on_fulltext_disable_query($wp_query);
+			}
 		}
 		// full text search enable
 		delete_option('fulltext_disabled');
@@ -1336,8 +1362,9 @@ class WCISPlugin {
 		} 
 		if (array_key_exists('alternatives', $response_json) && (count($response_json['alternatives']) > 0)){
 			$alternative_terms = array();
-			foreach($response_json['alternatives'] as $term)
+			foreach($response_json['alternatives'] as $term){
 				$alternative_terms[] = $term;
+			}
 			$did_you_mean_fields['alternative_terms'] = $alternative_terms;
 		}
 		
@@ -1350,8 +1377,9 @@ class WCISPlugin {
 			($fixed == '')		  || 		
 			(str_replace('\\', '', $original) == str_replace('\\', '', $fixed)) ||
 			(strcasecmp($original, $fixed) == 0)		// case-insensitive comparison
-		)
+		){
 			return true;
+		}
 		
 		return false;
 	}
@@ -1365,8 +1393,9 @@ class WCISPlugin {
 	}
 	
 	function post_limits_handler($limit){
-		if( is_search() && get_option('wcis_fulltext_ids'))			
+		if( is_search() && get_option('wcis_fulltext_ids')){			
 			$limit = 'LIMIT 0, ' . get_option('posts_per_page');
+		}
 		return $limit;
 	}
 	
@@ -1375,8 +1404,9 @@ class WCISPlugin {
 			
 			global $wp_query;			
 			$total_results = get_option('wcis_total_results');	
-			if ($total_results == -1)
+			if ($total_results == -1){
 				$total_results = 0;
+			}
 			
 			$wp_query->found_posts = $total_results;			
 			$wp_query->max_num_pages = ceil($total_results / get_option('posts_per_page'));
@@ -1424,16 +1454,46 @@ class WCISPlugin {
 	}
 	// FullText search end
 
+	function admin_init_handler(){
+		if ( isset($_GET['instantsearchplus']) && $_GET['instantsearchplus'] == 'remove_over_capacity_alert' ){
+			delete_option('wcic_site_alert');
+			wp_redirect(remove_query_arg('instantsearchplus'), 301);
+		} else if ( isset($_GET['instantsearchplus']) && $_GET['instantsearchplus'] == 'remove_just_created_alert' ){
+			delete_option('wcis_just_created_alert');
+			wp_redirect(remove_query_arg('instantsearchplus'), 301);
+		}
+	}
 	
 	// admin quota exceeded message
-	function show_admin_message(){				
-		if (is_admin() && get_option('wcic_site_alert')){
-			$alert = get_option('wcic_site_alert');
-			$msg = $alert['alerts'][0]['message'];
+	function show_admin_message(){			
+		if (is_admin()){
+			$dashboard_url = 'https://acp-magento.appspot.com/wc_dashboard';
+			$dashboard_url .= '?site_id=' . get_option( 'wcis_site_id' );
+			$dashboard_url .= '&authentication_key=' . get_option('authentication_key');
+			$dashboard_url .= '&new_tab=1';
+			$dashboard_url .= '&v=' . WCISPlugin::VERSION;
 			
-			echo '<div class="error" style="background-color:#fef7f1;"><p>';
-			printf(__('<b> %1$s </b> | <b><a href="%2$s">Upgrade now</a></b> to enable back'), $msg, add_query_arg('page', 'WCISPlugin'));
-			echo "</p></div>";
+			if (get_option('wcis_just_created_alert')){
+				$just_created_text = '';
+				
+				echo '<div class="updated"><p>';
+				printf( __( '<b>InstantSearch+ for WooCommerce is installed.</b> Please <b><u><a href="%1$s" target="_blank">Select your service plan</a></u></b> to get started <a href="%2$s" style="float:right"><u>Hide</u></a>', 'WCISPlugin' ), 
+							$dashboard_url, 
+							add_query_arg('instantsearchplus', 'remove_just_created_alert'));
+				echo "</p></div>";
+				
+			}
+			if (get_option('wcic_site_alert')){
+				$alert = get_option('wcic_site_alert');
+				$msg = $alert['alerts'][0]['message'];
+				
+				echo '<div class="error" style="background-color:#fef7f1;"><p>';
+				printf(__('<b> %1$s </b> | <b><a href="%2$s" target="_blank">Upgrade now</a></b> to enable back <a href="%3$s" style="float:right">Hide</a>', 'WCISPlugin'), 
+							$msg, 
+							$dashboard_url,
+							add_query_arg('instantsearchplus', 'remove_over_capacity_alert'));
+				echo "</p></div>";
+			}
 		}	
 	}
 	
@@ -1456,29 +1516,39 @@ class WCISPlugin {
 				if (!empty($response_json['alerts'])){
 					update_option('wcic_site_alert', $response_json);
 				} else { 
-					if (get_option('wcic_site_alert'))
+					if (get_option('wcic_site_alert')){
 						delete_option('wcic_site_alert');
+					}
 				}
 			}
 				
-			if (array_key_exists('timeframe', $response_json))
+			if (array_key_exists('timeframe', $response_json)){
 				self::update_timeframe($response_json['timeframe']);
+			}
 		}
 	}
 	
 	function update_timeframe($new_timeframe){	
 		if (get_option('wcis_timeframe') && ($new_timeframe < get_option('wcis_timeframe'))){	// on subscription upgrade
 			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
-			if (get_option('cron_product_list'))
-				self::execute_update_request();			
+			if (get_option('cron_product_list')){
+				self::execute_update_request();	
+			}		
 		}
 		update_option('wcis_timeframe', $new_timeframe);
 	}
 	
-	function content_filter_shortcode($content){
-		if (get_option('wcis_disable_shortcode_filter'))
-			return $content;
-		
+	
+	
+	function add_woocommerce_integrations_handler($integrations){
+		require_once( plugin_dir_path( __FILE__ ) . 'wcis_integration.php' );
+		$integrations[] = 'WCISIntegration';
+		return $integrations;
+	}
+	
+	
+	
+	function content_filter_shortcode($content){		
 		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/s';
 		while(preg_match($pattern, $content)){
 			$content = preg_replace($pattern, '$2', $content);
@@ -1501,8 +1571,6 @@ class WCISPlugin {
 	}
 	
 	function content_filter_shortcode_with_content($content){
-		if (get_option('wcis_disable_shortcode_filter'))
-			return $content;
 		$const_shortcode = array("php", "insert_php");
 		if ($content != ''){
 			foreach ($const_shortcode as $filter){
