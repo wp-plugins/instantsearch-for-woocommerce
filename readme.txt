@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, woocommerce product suggest search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,7 +55,7 @@ To learn more please visit http://www.instantsearchplus.com/instantsearchplus-au
 2. Search for 'InstantSearch+ for WooCommerce'
 3. Click 'Install Now'
 4. Activate the plugin on the Plugin dashboard
-5. Add any search widget (like WooCommerce Product Search) to your preferred location by visiting Wordpress Admin ==> Appearance ==> Widgets
+5. Add any search widget (like WooCommerce Product Search) to your preferred location by visiting WordPress Admin ==> Appearance ==> Widgets
 
 Having issues?  contact support@instantsearchplus.com
 
@@ -65,11 +65,11 @@ Having issues?  contact support@instantsearchplus.com
 == Frequently asked questions ==
 = Do I need to sign up for this service? =
 
-No.  Once you install the plugin you will have our dashboard and customization right in the Wordpress admin.
+No.  Once you install the plugin you will have our dashboard and customization right in the WordPress admin.
 
 = Really Free?  Do you offer premium features? =
 
-Our basic offering is indeed free and works great for small WooCommerce sites.  We do offer premium packages for higher capacity needs - explore them in the Wordpress area for InstantSearch+.
+Our basic offering is indeed free and works great for small WooCommerce sites.  We do offer premium packages for higher capacity needs - explore them in the WordPress area for InstantSearch+.
 
 = Does InstantSearch+ support WooCommerce Multisite? =
 
@@ -77,19 +77,23 @@ Not yet.  It's in the makes.
 
 = Can InstantSearch+ work with my searchbox? =
 
-Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wordpress Widget or a custom template
+Yes - InstantSearch+ can work with any html inputbox on your page. Be that a WordPress Widget or a custom template
 
 
 == Screenshots ==
 
 1. World-class autocomplete dropdown with WooCommerce products and popular searches.
-2. Wordpress compatible dashboard to see insights and customize the widget.
+2. WordPress compatible dashboard to see insights and customize the widget.
 
 
 
 
 
 == Changelog ==
+
+= 1.2.0 = 
+* WooCommerce integration
+* damin notice after install
 
 = 1.1.1 = 
 * fix - security issues
