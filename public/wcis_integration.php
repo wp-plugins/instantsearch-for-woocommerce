@@ -34,7 +34,7 @@ class WCISIntegration extends WC_Integration{
 	
 	public function init_form_fields() {
 		
-		$dashboard_url = 'https://acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1' . '&v=' . WCISPlugin::VERSION;
+		$dashboard_url = 'http://woo.instantsearchplus.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1' . '&v=' . WCISPlugin::VERSION;
 		
 		$this->form_fields = array(
 	 			'customize_button' => array(

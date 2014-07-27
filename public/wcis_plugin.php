@@ -119,7 +119,7 @@ class WCISPlugin {
 	}
 	
 	public static function wcis_add_action_links( $links ) {				
-		$url = 'https://acp-magento.appspot.com/wc_dashboard';
+		$url = 'http://woo.instantsearchplus.com/wc_dashboard';
 		$params = '?site_id=' . get_option( 'wcis_site_id' );
 		$params .= '&authentication_key=' . get_option('authentication_key');
 		$params .= '&new_tab=1';
@@ -1467,7 +1467,7 @@ class WCISPlugin {
 	// admin quota exceeded message
 	function show_admin_message(){			
 		if (is_admin()){
-			$dashboard_url = 'https://acp-magento.appspot.com/wc_dashboard';
+			$dashboard_url = 'http://woo.instantsearchplus.com/wc_dashboard';
 			$dashboard_url .= '?site_id=' . get_option( 'wcis_site_id' );
 			$dashboard_url .= '&authentication_key=' . get_option('authentication_key');
 			$dashboard_url .= '&new_tab=1';
