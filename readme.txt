@@ -1,10 +1,10 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
 Donate link:
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, woocommerce product suggest search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,7 +55,7 @@ To learn more please visit http://www.instantsearchplus.com/instantsearchplus-au
 2. Search for 'InstantSearch+ for WooCommerce'
 3. Click 'Install Now'
 4. Activate the plugin on the Plugin dashboard
-5. Add any search widget (like WooCommerce Product Search) to your preferred location by visiting WordPress Admin ==> Appearance ==> Widgets
+5. In case you do not have a search box, go to WordPress admin page ==> Appearance ==> Widgets and drag InstantSearch+ Search Box widget (or any other search widget) to your preferred location.
 
 Having issues?  contact support@instantsearchplus.com
 
@@ -90,6 +90,9 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 
 == Changelog ==
+
+= 1.2.1 = 
+* new InstanSearch+ search box widget
 
 = 1.2.0 = 
 * WooCommerce integration
