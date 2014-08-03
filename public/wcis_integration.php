@@ -20,7 +20,7 @@ class WCISIntegration extends WC_Integration{
 		$this->id                 = 'WCISPlugin';
 		
 		//WCISPlugin - WCISPlugin::get_instance()->get_plugin_slug() || instantsearch-for-woocommerce
-		$this->method_title       = __( 'InstantSeach+ for WooCommerce', 'WCISPlugin' );
+		$this->method_title       = __( 'InstantSearch+ for WooCommerce', 'WCISPlugin' );
 		 
 		$this->method_description = __( 'Best search plugin for WooCommerce.', 'WCISPlugin' );
 	
