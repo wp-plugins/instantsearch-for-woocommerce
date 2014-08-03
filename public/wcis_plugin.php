@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.0';
+	const VERSION = '1.2.1';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				= 1200; 	// -> 20 minutes
@@ -105,6 +105,9 @@ class WCISPlugin {
         // WooCommerce Integration
         add_filter( 'woocommerce_integrations', array( $this, 'add_woocommerce_integrations_handler' ) );
         
+        // InstantSearch+ search box widget
+        add_action( 'widgets_init', array( $this, 'widgets_registration_handler' ) );
+        
 	}
 
 	/**
@@ -133,6 +136,10 @@ class WCISPlugin {
 				$links
 		);
 		
+	}
+	
+	public function widgets_registration_handler(){
+		register_widget('WCISPluginWidget');
 	}
 
 	/**
@@ -923,7 +930,7 @@ class WCISPlugin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_styles() {
-// 		wp_enqueue_style( $this->plugin_slug . '-plugin-styles', plugins_url( 'assets/css/public.css', __FILE__ ), array(), self::VERSION );
+		wp_enqueue_style( $this->plugin_slug . '-plugin-styles', plugins_url( 'assets/css/wcis_plugin.css', __FILE__ ), array(), self::VERSION );
 	}
 
 	/**
@@ -1088,8 +1095,7 @@ class WCISPlugin {
 				} else {
 					delete_option('wcis_enable_highlight');
 				}
-			}
-			
+			} 
 		}
 	}
 	
