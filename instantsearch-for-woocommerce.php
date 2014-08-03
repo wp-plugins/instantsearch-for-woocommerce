@@ -9,7 +9,7 @@
  * Plugin Name:       InstantSearch+ for WooCommerce
  * Plugin URI:        www.instantsearchplus.com 
  * Description:       Best search plugin for WooCommerce
- * Version:           1.2.0
+ * Version:           1.2.1
  * Author:            Fast Simon Inc
  * Author URI:        www.instantsearchplus.com
  * Text Domain:       WCISPlugin
@@ -24,7 +24,8 @@ if ( ! defined( 'ABSPATH' ) )
  * Public-Facing Functionality
  *----------------------------------------------------------------------------*/
 
-require_once( plugin_dir_path( __FILE__ ) . 'public/wcis_plugin.php' );
+require_once(plugin_dir_path( __FILE__ ) . 'public/wcis_plugin.php');
+require_once(plugin_dir_path( __FILE__ ) . 'widget/instantsearch-for-woocommerce-widget.php');
 
 register_activation_hook( __FILE__, array( WCISPlugin::get_instance(), 'activate' ) );
 register_deactivation_hook( __FILE__, array( WCISPlugin::get_instance(), 'deactivate' ) );
