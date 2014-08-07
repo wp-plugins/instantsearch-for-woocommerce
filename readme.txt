@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,8 +91,11 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 == Changelog ==
 
+= 1.2.2 = 
+* InstantSearch+ search box widget improvements + widget configurations
+
 = 1.2.1 = 
-* new InstanSearch+ search box widget
+* new InstantSearch+ search box widget
 
 = 1.2.0 = 
 * WooCommerce integration
