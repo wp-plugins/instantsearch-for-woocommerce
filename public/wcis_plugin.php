@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.1';
+	const VERSION = '1.2.2';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				= 1200; 	// -> 20 minutes
@@ -50,9 +50,7 @@ class WCISPlugin {
 	 *
 	 * @var      object
 	 */
-	protected static $instance = null;
-	
-	protected $is_out_of_sync = false;   
+	protected static $instance = null;  
 
 	/**
 	 * Initialize the plugin by setting localization and loading public scripts
@@ -268,15 +266,23 @@ class WCISPlugin {
 		delete_option('wcis_batch_size');
 		delete_option('authentication_key');
 		delete_option('wcis_timeframe');
+		delete_option('wcis_logging');
+		delete_option('max_num_of_batches');
+		delete_option('wcis_total_results');
+		
+		delete_option('wcis_fulltext_ids');
+		delete_option('fulltext_disabled');
+		delete_option('just_created_site');
+		delete_option('wcis_did_you_mean_enabled');
+		delete_option('wcis_did_you_mean_fields');
+		delete_option('wcis_search_query');
+		
+		delete_option('wcis_enable_highlight');
 		
 		delete_option('cron_product_list');
+		delete_option('cron_in_progress');
 		delete_option('wcic_site_alert');
-		
-		delete_option('is_out_of_sync');
-		delete_option('is_out_of_sync_install');
-		delete_option('is_out_of_sync_all_products');
-		delete_option('is_out_of_sync_product');
-		delete_option('retries_limit_counter');
+		delete_option('wcis_just_created_alert');
 	}
 	
 	/**
@@ -406,9 +412,6 @@ class WCISPlugin {
             	
             	$update_product_timeframe = $response_json->{'wcis_timeframe'};
             	update_option('wcis_timeframe', $update_product_timeframe);
-            	
-            	// TODO: temporary
-            	update_option('do_not_send_retries', true);
 	            	
 			} catch (Exception $e){
             	$err_msg = "After install internal exception raised msg: ". $e->getMessage();
@@ -423,15 +426,11 @@ class WCISPlugin {
     private static $category2id = array();
     
     private static function build_categories()
-    {
-        $args = array(
-                 'number'     => $number,
-                 'orderby'    => $orderby,
-                 'order'      => $order,
-                 'hide_empty' => $hide_empty,
-                 'include'    => $ids
-             );
-        
+    {        
+    	$args = array(
+    			'orderby'    => 'count',
+    			'hide_empty' => 1,
+    	);
         $product_categories = get_terms( 'product_cat', $args );
         $count = count($product_categories);
         $categories_to_send = array();
@@ -440,7 +439,7 @@ class WCISPlugin {
                 // retrieve the thumbnail
                 $thumbnail_id = get_woocommerce_term_meta( $product_category->term_id, 'thumbnail_id', true );
                 $image = wp_get_attachment_url( $thumbnail_id );
-                $children =get_term_children($product_category->term_id, 'product_cat');
+                $children = get_term_children($product_category->term_id, 'product_cat');
                 
                 $categories_to_send[] = array('category_id'=>$product_category->term_id, 
                                                'parent_id'=>$product_category->parent,
@@ -456,6 +455,7 @@ class WCISPlugin {
             }
 
         }
+
     }
     
     private function query_products($page = 1) {
@@ -848,11 +848,6 @@ class WCISPlugin {
     		if (!$is_retry){
     			self::send_products_batch($products, true);
     		}
-    	} else {
-    		update_option('is_out_of_sync', false);
-    		update_option('is_out_of_sync_all_products', false);
-    		delete_option('is_out_of_sync_product');
-    		delete_option('retries_limit_counter');
     	}
     }
     
@@ -1052,13 +1047,6 @@ class WCISPlugin {
 				self::push_wc_products();
 				status_header(200);
 				exit();		
-			} elseif ($req->query_vars['instantsearchplus'] == 'stop_retries'){
-				// do not send retries anymore
-				update_option('do_not_send_retries', true);
-				delete_option('is_out_of_sync_product');
-				delete_option('is_out_of_sync_install');
-				delete_option('is_out_of_sync_all_products');				
-				update_option('is_out_of_sync', false);				
 			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
 				$batch_num = $req->query_vars['instantsearchplus_parameter'];			
 				self::puch_wc_batch($batch_num);
@@ -1069,8 +1057,8 @@ class WCISPlugin {
 				self::update_timeframe($timeframe);
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'remove_admin_alerts'){
-				delete_option('remove_over_capacity_alert');
-				delete_option('remove_just_created_alert');
+				delete_option('wcic_site_alert');
+				delete_option('wcis_just_created_alert');
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
 				self::check_for_alerts();
@@ -1095,7 +1083,8 @@ class WCISPlugin {
 				} else {
 					delete_option('wcis_enable_highlight');
 				}
-			} 
+			}
+			
 		}
 	}
 	
