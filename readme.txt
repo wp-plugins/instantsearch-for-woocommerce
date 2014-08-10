@@ -15,9 +15,10 @@ Add the fastest, most advanced, cloud-based instant search to your WooCommerce s
 Search-as-you-type product names, descriptions, images, and prices from the first typed character. 
 Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions  make it a must-have for your eCommerce store.
 
-Enjoy our 7- day FREE TRIAL and then sign up to one of our affordable monthly subscriptions from $4.99.To learn more please visit http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
-InstantSearch+ is free up to 50 products.
 Play with our demo site at http://woocommerce.instantsearchplus.com  
+
+Enjoy our 7- day FREE TRIAL and then sign up to one of our affordable monthly subscriptions from $4.99. To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
+InstantSearch+ is free up to 50 products.
 
 
 [youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
