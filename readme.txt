@@ -87,8 +87,8 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 1. World-class autocomplete dropdown with WooCommerce products and popular searches.
 2. WordPress compatible dashboard to see insights and customize the widget.
-3. Full text search with "did-you-mean" typo correction and search terms highlight - full page
-4. Full text search with "did-you-mean" typo correction and search terms highlight - zoom
+3. Full text search with "did-you-mean", typo correction and search terms highlight - full page
+4. Full text search with "did-you-mean", typo correction and search terms highlight - zoom
 
 
 
