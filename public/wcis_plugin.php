@@ -20,13 +20,16 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.2';
+	const VERSION = '1.2.3';
 	
 	// cron const variables
-	const CRON_THRESHOLD_TIME 				= 1200; 	// -> 20 minutes
-	const CRON_EXECUTION_TIME 				= 900; 		// -> 15 minutes
-	const SINGLES_TO_BATCH_THRESHOLD		= 10;		// if more then 10 products send as batch
+	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
+	const CRON_EXECUTION_TIME 				 = 900; 		// -> 15 minutes
+	const SINGLES_TO_BATCH_THRESHOLD		 = 10;		// if more then 10 products send as batch
+	const CRON_SEND_CATEGORIES_TIME_INTERVAL = 30;       // -> 30 secunds
 	
+	const ELEMENT_TYPE_PRODUCT				 = 0;
+	const ELEMENT_TYPE_CATEGORY				 = 1;
 
 	/**
 	 *
@@ -51,6 +54,14 @@ class WCISPlugin {
 	 * @var      object
 	 */
 	protected static $instance = null;  
+	
+	/*
+	 * Full text search parameters
+	 */
+	private $wcis_fulltext_ids = null;
+	private $wcis_total_results = 0;
+	private $wcis_did_you_mean_fields = null;
+	private $wcis_search_query = null;
 
 	/**
 	 * Initialize the plugin by setting localization and loading public scripts
@@ -66,8 +77,12 @@ class WCISPlugin {
         add_action( 'wpmu_new_blog', array( $this, 'activate_new_site' ) );
                 
 //         add_action( 'publish_post', array( $this, 'on_product_update' ));
-        add_action( 'save_post', array( $this, 'on_product_save' ));
-        add_action('trashed_post', array( $this, 'on_product_delete' ));
+        add_action('save_post', array( $this, 'on_product_save'));
+        add_action('trashed_post', array( $this, 'on_product_delete'));
+        
+		add_action ( 'edit_product_cat', array( $this, 'on_category_edit' )); 
+		add_action ( 'create_product_cat', array( $this, 'on_category_create' )); 
+		add_action ( 'delete_product_cat', array( $this, 'on_category_delete' ));
            
             // profile changes (url/email update handler)
 //             add_action( 'profile_update', array( $this, 'on_profile_update') );
@@ -81,9 +96,11 @@ class WCISPlugin {
         add_filter('query_vars', array($this, 'filter_instantsearchplus_request'));   
 
         // cron
-        add_action( 'instantsearchplus_cron_request_event', array( $this, 'handle_cron_request' ) );   
-        add_action( 'instantsearchplus_cron_check_alerst', array( $this, 'check_for_alerts' ) );
-        add_action( 'instantsearchplus_send_logging_record', array($this, 'send_logging_record'), 10, 1);
+        add_action('instantsearchplus_cron_request_event', array( $this, 'execute_update_request' ) );   
+        add_action('instantsearchplus_cron_check_alerst', array( $this, 'check_for_alerts' ) );
+        add_action('instantsearchplus_send_logging_record', array($this, 'send_logging_record'), 10, 1);
+        
+        add_action('instantsearchplus_send_all_categories', array($this, 'send_categories_as_batch'));
         
         // FullText search
         add_filter( 'posts_search', array( $this, 'posts_search_handler' ) );
@@ -203,9 +220,10 @@ class WCISPlugin {
 	 */
 	public function deactivate( $network_wide ) {		
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' );
-		wp_clear_scheduled_hook( 'instantsearchplus_cron_check_alerst' ); 	
+		wp_clear_scheduled_hook( 'instantsearchplus_cron_check_alerst' ); 
+		wp_clear_scheduled_hook( 'instantsearchplus_send_logging_record' );
+		wp_clear_scheduled_hook( 'instantsearchplus_send_all_categories' );
 		
-		delete_option('cron_product_list');
 		delete_option('is_activation_triggered');
 		
 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
@@ -270,9 +288,11 @@ class WCISPlugin {
 		delete_option('max_num_of_batches');
 		delete_option('wcis_total_results');
 		
-		delete_option('wcis_fulltext_ids');
 		delete_option('fulltext_disabled');
 		delete_option('just_created_site');
+		
+		// compatibility 
+		delete_option('wcis_fulltext_ids');
 		delete_option('wcis_did_you_mean_enabled');
 		delete_option('wcis_did_you_mean_fields');
 		delete_option('wcis_search_query');
@@ -280,6 +300,7 @@ class WCISPlugin {
 		delete_option('wcis_enable_highlight');
 		
 		delete_option('cron_product_list');
+		delete_option('cron_category_list');
 		delete_option('cron_in_progress');
 		delete_option('wcic_site_alert');
 		delete_option('wcis_just_created_alert');
@@ -417,47 +438,65 @@ class WCISPlugin {
             	$err_msg = "After install internal exception raised msg: ". $e->getMessage();
             	self::send_error_report($err_msg);
             }
-            	//self::build_categories();
+
             self::push_wc_products();
+            
+            wp_schedule_single_event(time() + self::CRON_SEND_CATEGORIES_TIME_INTERVAL, 'instantsearchplus_send_all_categories');
 		}
 	}
-    
+   
 	
-    private static $category2id = array();
-    
-    private static function build_categories()
-    {        
-    	$args = array(
-    			'orderby'    => 'count',
-    			'hide_empty' => 1,
-    	);
-        $product_categories = get_terms( 'product_cat', $args );
-        $count = count($product_categories);
-        $categories_to_send = array();
-        if ( $count > 0 ){
-            foreach ( $product_categories as $product_category ) {
-                // retrieve the thumbnail
-                $thumbnail_id = get_woocommerce_term_meta( $product_category->term_id, 'thumbnail_id', true );
-                $image = wp_get_attachment_url( $thumbnail_id );
-                $children = get_term_children($product_category->term_id, 'product_cat');
-                
-                $categories_to_send[] = array('category_id'=>$product_category->term_id, 
-                                               'parent_id'=>$product_category->parent,
-                                               'name'=>$product_category->name,
-                                               'url_path'=> get_term_link($product_category, $product_categories),
-                                               'is_active'=> $product_category->count > 0,
-                                               'description'=>$product_category->description,
-                                               'thumbnail'=>$image,
-                                               'children'=>$children
-                                              );
-                
-                self::$category2id[$product_category->name] = $product_category->term_id;
-            }
+	public function on_category_edit($category_id = null){
+		if ($category_id == null)
+			return;		
+		self::on_category_update($category_id, 'edit');
+	}
+	
+	public function on_category_create($category_id){
+		if ($category_id == null)
+			return;		
+		self::on_category_update($category_id, 'create');
+	}
+	
+	public function on_category_delete($category_id){
+		if ($category_id == null)
+			return;		
+		self::on_category_update($category_id, 'delete');
+	}
+	
+	public function on_category_update($category_id, $action){
+	    $categorys_list = get_option('cron_category_list');
+	    $timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
+	    if(get_option('wcis_timeframe')){
+	        $timeframe = get_option('wcis_timeframe');
+	    } else {
+	        $timeframe = self::CRON_EXECUTION_TIME;
+	    }
+	    
+	    if ($timestamp != false){ // event already scheduled
+	        if ($categorys_list){ // category cron list is not empty
+	            self::insert_element_to_cron_list($category_id, $action, self::ELEMENT_TYPE_CATEGORY);
+	        } else {
+	            wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+	            $err_msg = "event scheduled to Cron but category's list is empty";
+	            self::send_error_report($err_msg);
+	        }
+	    } else {  // event not scheduled
+	        if ($categorys_list){ 
+	            if (!get_option('cron_in_progress')){	                
+	                self::execute_update_request();
+	                wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+	            }
+	            // add current category to the list and schedule cron event
+	            self::insert_element_to_cron_list($category_id, $action, self::ELEMENT_TYPE_CATEGORY);
+	        } else {
+	            self::insert_element_to_cron_list($category_id, $action, self::ELEMENT_TYPE_CATEGORY);
+	            wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+	        }
+	    }	
+	}
+	
 
-        }
-
-    }
-    
     private function query_products($page = 1) {
     	include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
     	if(is_plugin_active('woocommerce-multilingual/wpml-woocommerce.php')){
@@ -508,25 +547,12 @@ class WCISPlugin {
 		            $max_num_of_batches = get_option('max_num_of_batches');
 		            $is_additional_fetch_required = false;
 		            
-		            if (get_option('wcis_logging')){
-		            	$err_msg = "before pages loop, found_posts: " . (string)$total . ", num of batches: " . (string)$total_pages;
-		            	self::send_error_report($err_msg);
-		            }
-		            
 		            while ($page <= $total_pages){
-		            	if (get_option('wcis_logging')){
-		            		$err_msg = "preparing page: " . $page;
-		            		self::send_error_report($err_msg);
-		            	}
 		            	if ($loop->have_posts()){
 		            		foreach( $loop->posts as $id ){
 		            			$product = self::get_product_from_post($id);
 		            			$product_array[] = $product;
 		            		}
-		            	}
-		            	if (get_option('wcis_logging')){
-		            		$err_msg = "after product's loop";
-		            		self::send_error_report($err_msg);
 		            	}
 		                
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches){
@@ -585,7 +611,7 @@ class WCISPlugin {
 	        	self::send_error_report($err_msg);
 	        }
         } catch (Exception $e){
-        	$err_msg = "can't find active plugin of woocommerce, alternative check: " . $is_woo;
+        	$err_msg = "before fetch products Exception was raised";
         	self::send_error_report($err_msg);
         }
     }
@@ -692,6 +718,32 @@ class WCISPlugin {
     	
         return $send_product;
     }
+
+    public function get_category_by_id($category_id){
+        $product_category = get_term_by( 'id', $category_id, 'product_cat');
+//         $category = get_term_by( 'id', $category_id, 'product_cat', 'ARRAY_A' );
+        if ($product_category == false){
+            $err_msg = "in get_category_by_id() - product_category == false";
+            self::send_error_report($err_msg);
+            return null;
+        }
+        
+        $thumbnail_id = get_woocommerce_term_meta( $product_category->term_id, 'thumbnail_id', true );
+        $image = wp_get_attachment_url( $thumbnail_id );
+        $children = get_term_children($product_category->term_id, 'product_cat');
+        
+        $category = array(  
+                'category_id'   => (string)$product_category->term_id,
+                'name'          => $product_category->name,
+                'is_active'     => $product_category->count > 0,
+                'description'   => $product_category->description,
+                'thumbnail'     => $image,
+                'children'      => $children,
+                'parent_id'     => (string)$product_category->parent,
+                'url_path'      => get_term_link((int)$category_id, 'product_cat'),                    
+        );
+        return $category;
+    }
     
 
     public function on_product_save($post_id){
@@ -700,116 +752,122 @@ class WCISPlugin {
     		return;
     	}
     	$action = 'insert';
- 
-    	$products_list = get_option('cron_product_list');
-    	$timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
-    	
-    	if(get_option('wcis_timeframe')){
-    		$timeframe = get_option('wcis_timeframe');
-    	} else { 
-    		$timeframe = self::CRON_EXECUTION_TIME;
-    	}
-    	
-		if ($timestamp != false){	// event already scheduled
-			if ($products_list){	// if there is at least one product in the list
-				// checking time-stamp diff (current time - first product's time-stamp)
-				$delta = time() - $products_list[0]['time_stamp'];
-					
-				if (($delta > ($timeframe + self::CRON_THRESHOLD_TIME)) && !get_option('cron_in_progress')){
-					wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' ); 	// removing task from cron
-					self::execute_update_request();										// executing request for all waiting products
-					// reschedule current product to be executed by cron
-					wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
-				}
-				self::insert_product_to_cron_list($post_id, $action);
-				
-			} else {
-				wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
-				$err_msg = "event scheduled to Cron but product's list is empty";
-				self::send_error_report($err_msg);
-			}		
-    	} else {
-    		// $timestamp == false - event not scheduled
-    		if ($products_list){
-    			// no event in cron, but the cron's list has products -> update all products that are in the list
-    			if (!get_option('cron_in_progress')){
-    				// if cron is currently not in progress -> update all products that are in the list
-    				self::execute_update_request();
-    				wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
-    			}
-    			// add current product to the list and schedule cron event
-    			self::insert_product_to_cron_list($post_id, $action);
-    			
-    		} else {
-    			// updating product's list and activating cron event
-    			self::insert_product_to_cron_list($post_id, $action);
-    			wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');			
-    		}
-    	}  	
+        self::on_product_update($post_id, $action);
     }
     
-    function insert_product_to_cron_list($post_id, $action){
-    	$products_list = get_option('cron_product_list');
-    	if ($products_list){	// the list already has products
+    public function on_product_delete($post_id ){
+        $post = get_post( $post_id );
+        if ( 'product' !=  $post->post_type){
+            return;
+        }
+        $action = 'delete';
+        self::on_product_update($post_id, $action);
+    }
+    
+    public static function on_product_update($post_id, $action){
+        $products_list = get_option('cron_product_list');
+        $timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
+         
+        if(get_option('wcis_timeframe')){
+            $timeframe = get_option('wcis_timeframe');
+        } else {
+            $timeframe = self::CRON_EXECUTION_TIME;
+        }
+         
+        if ($timestamp != false){	// event already scheduled
+            if ($products_list){	// if there is at least one product in the list
+                // checking time-stamp diff (current time - first product's time-stamp)
+                $delta = time() - $products_list[0]['time_stamp'];
+                 
+                if (($delta > ($timeframe + self::CRON_THRESHOLD_TIME)) && !get_option('cron_in_progress')){
+                    wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' ); 	// removing task from cron
+                    self::execute_update_request();										// executing request for all waiting products
+                    // reschedule current product to be executed by cron
+                    wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+                }
+                self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
+    
+            } else {
+                wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+                $err_msg = "event scheduled to Cron but product's list is empty";
+                self::send_error_report($err_msg);
+            }
+        } else {
+            // $timestamp == false - event not scheduled
+            if ($products_list){
+                // no event in cron, but the cron's list has products -> update all products that are in the list
+                if (!get_option('cron_in_progress')){
+                    // if cron is currently not in progress -> update all products that are in the list
+                    self::execute_update_request();
+                    wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+                }
+                // add current product to the list and schedule cron event
+                self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
+                 
+            } else {
+                // updating product's list and activating cron event
+                self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
+                wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+            }
+        }
+        
+        /*
+         *     $cat->count is the number of products that are under this ($cat) category.
+         *     if there is only one product under $cat (meaning only this product) then update category -
+         *         catches category change from active -> not active
+         */
+        foreach (wp_get_post_terms($post_id, 'product_cat') as $cat){
+            if ($cat->count == 1){
+                self::insert_element_to_cron_list($cat->term_id, 'edit', self::ELEMENT_TYPE_CATEGORY);
+            }
+        }
+    }
+    
+    // element can be either product or category
+    function insert_element_to_cron_list($element_id, $action, $type_of_element = self::ELEMENT_TYPE_PRODUCT){
+    	if ($type_of_element == self::ELEMENT_TYPE_CATEGORY){
+    		$elements_list = get_option('cron_category_list');
+    	} else { 
+    		$elements_list = get_option('cron_product_list');
+    	} 
+    	if ($elements_list){	// the list already has products
     		$is_unique = true;
-    		foreach ($products_list as $p){
-    			if ($post_id == $p['post_id'] && $action == $p['action']){
+    		foreach ($elements_list as $p){
+    			if ($element_id == $p['element_id'] && $action == $p['action']){
     				$is_unique = false;
     				break;
     			}
     		}
     		if ($is_unique){
-    			$product_node = array(
-    					'post_id' 		=> $post_id,
+    			$element_node = array(
+    					'element_id' 	=> $element_id,
     					'action' 		=> $action,
     					'time_stamp' 	=> time()
     			);
-    			array_push($products_list, $product_node);
-    			update_option('cron_product_list', $products_list);
+    			array_push($elements_list, $element_node);
+    			if ($type_of_element == self::ELEMENT_TYPE_CATEGORY){
+    				update_option('cron_category_list', $elements_list);
+    			} else {
+    				update_option('cron_product_list', $elements_list);
+    			}
+
     		}
     	} else {	// first product in the list
-    		$products_list = array(0 =>
+    		$elements_list = array(0 =>
     				array(
-    						'post_id' 		=> $post_id,
+    						'element_id' 	=> $element_id,
     						'action' 		=> $action,
     						'time_stamp' 	=> time()
     				)
     		);
-    		update_option('cron_product_list', $products_list);
+    	    if ($type_of_element == self::ELEMENT_TYPE_CATEGORY){
+    			update_option('cron_category_list', $elements_list);
+    		} else {
+    			update_option('cron_product_list', $elements_list);
+    		};
     	}
     }
-    
-    /*
-     * update existing product
-     */
-    public static function on_product_update($post_id )
-    {    	
-    	$post = get_post( $post_id );
-        if ( 'product' !=  $post->post_type || get_post_status($post_id) == 'trash'){// or  "publish" != $post->post_status ) {
-            return;
-        }
 
-        $form_data = $_POST;
-        $original_post_status = $form_data['original_post_status'];
-        if ($original_post_status == 'publish'){
-            $action = 'update';
-        } else {
-            $action = 'insert';
-        }
-        
-        self::send_product_update($post_id, $action);
-    }
-    
-    public function on_product_delete($post_id )
-    {
-        $post = get_post( $post_id );  
-        if ( 'product' !=  $post->post_type){
-            return;
-        }
-        
-        $action = 'delete';
-        self::send_product_update($post_id, $action);
-    }
     
     private function send_products_batch($products, $is_retry = false){
     	$total_products 				= $products['total_products'];
@@ -851,9 +909,60 @@ class WCISPlugin {
     	}
     }
     
-    
-    private static function send_categories($categories)
-    {
+    function send_categories_as_batch($categorys_list = null){
+        $category_array = array();
+        if ($categorys_list != null){
+            foreach($categorys_list as $key => $element){      
+                if ($element['action'] == 'delete'){
+                    $category = array('category_id' => $element['element_id']);
+                } else {
+                    $category = self::get_category_by_id($element['element_id']);     
+                }   
+                unset($categorys_list[$key]);
+                if ($category == null){
+                    continue;
+                } 
+                
+                $category['action'] = $element['action'];    
+                $category_array[] = $category;
+            }
+            update_option('cron_category_list', $categorys_list);
+        } else {    // fetch all categories        
+            $args = array(
+                    'orderby'    => 'count',
+                    'hide_empty' => 1,  // sending empty categories!
+                    'fields'     => 'ids',
+            );
+            $product_category_ids = get_terms( 'product_cat', $args );
+            if (!empty($product_category_ids) && !is_wp_error($product_category_ids) && count($product_category_ids) > 0){
+                foreach($product_category_ids as $category_id){
+                    $category = self::get_category_by_id($category_id);
+                    if ($category == null){
+                        $err_msg = "ERROR!!! in  send_categories_as_batch() - category == null";
+                        self::send_error_report($err_msg);
+                        continue;
+                    }
+                    $category['action'] = 'edit';
+                    $category_array[] = $category;
+                }
+            } 
+        }
+        
+        if ($category_array){       // if there are categories to send
+            $url = self::SERVER_URL . 'wc_update_categories';
+            $args = array(
+                    'body' => array('site' => get_option('siteurl'),
+                                    'site_id' => get_option( 'wcis_site_id' ),
+                                    'categories' => json_encode($category_array),
+                                    'authentication_key' => get_option('authentication_key')),
+            );
+            $resp = wp_remote_post( $url, $args );
+            
+            if (is_wp_error($resp) || $resp['response']['code'] != 200){	// != 200
+                $err_msg = "ERROR!!! update category request failed (response != 200)";
+                self::send_error_report($err_msg);   
+            }
+        }
     }
     
     private function send_product_update($post_id, $action)
@@ -960,11 +1069,11 @@ class WCISPlugin {
 	        
 	        if (get_option('just_created_site')){
 	        	$args .= 'just_created_site=true&';
-	        }else if (get_option('wcis_did_you_mean_enabled') && get_option('wcis_did_you_mean_fields')){
+	        }else if ($this->wcis_did_you_mean_fields != null && !empty($this->wcis_did_you_mean_fields)){
 	        	// did you mean injection
 	        	$args .= 'did_you_mean_enabled=true&';
 
-				$did_you_mean_fields = get_option('wcis_did_you_mean_fields');
+				$did_you_mean_fields = $this->wcis_did_you_mean_fields;
 				if (array_key_exists('alternative_terms', $did_you_mean_fields)){
 		        	$alternative_terms_arr = $did_you_mean_fields['alternative_terms'];
 		        	
@@ -981,14 +1090,13 @@ class WCISPlugin {
 					$args .= 'original_query=' . urlencode($did_you_mean_fields['original_query']) . '&';
 					$args .= 'fixed_query=' . urlencode($did_you_mean_fields['fixed_query']) . '&';
 				}
-				// clearing did you mean parameters from data base
-				delete_option('wcis_did_you_mean_enabled');
-				delete_option('wcis_did_you_mean_fields');
-	        } else if (get_option('wcis_search_query')){
-	        	$args .= 'original_query=' . urlencode(get_option('wcis_search_query')) . '&';
+				// clearing did you mean parameters
+				$this->wcis_did_you_mean_fields = null;
+	        } else if ($this->wcis_search_query != null){
+	        	$args .= 'original_query=' . urlencode($this->wcis_search_query) . '&';
+	        	$this->wcis_search_query = null;
 	        }
-	        delete_option('wcis_search_query');
-	        
+
 	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
         }
 	}
@@ -1043,10 +1151,14 @@ class WCISPlugin {
 				);
 				exit(json_encode($response));
 				
-			} elseif ($req->query_vars['instantsearchplus'] == 'sync'){
+			} elseif ($req->query_vars['instantsearchplus'] == 'sync'){ 
 				self::push_wc_products();
 				status_header(200);
 				exit();		
+			} elseif ($req->query_vars['instantsearchplus'] == 'category_sync'){ 
+			    wp_schedule_single_event(time() + self::CRON_SEND_CATEGORIES_TIME_INTERVAL, 'instantsearchplus_send_all_categories');
+			    status_header(200);
+			    exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
 				$batch_num = $req->query_vars['instantsearchplus_parameter'];			
 				self::puch_wc_batch($batch_num);
@@ -1083,74 +1195,86 @@ class WCISPlugin {
 				} else {
 					delete_option('wcis_enable_highlight');
 				}
-			}
-			
+			} elseif ($req->query_vars['instantsearchplus'] == 'clear_cron'){
+			    delete_option('cron_product_list');
+			    delete_option('cron_category_list');
+			    delete_option('cron_in_progress');
+			    wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+			} elseif ($req->query_vars['instantsearchplus'] == 'tmp'){    
+			} 
 		}
 	}
 	
-	
+	// compatible to an old version | due to CRON request that is already scheduled
 	function handle_cron_request(){
+	    self::execute_update_request();
+	}
+	
+	function execute_update_request(){	   
+	    if (get_option('cron_in_progress')){
+	        return;
+	    }
 		update_option('cron_in_progress', True);
-		$products_list = get_option('cron_product_list');
-		if (!$products_list){
-			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
-			delete_option('cron_in_progress');
-			return;
-		} 
 		
-		if (count($products_list) <= self::SINGLES_TO_BATCH_THRESHOLD){
-			foreach ($products_list as $key => $product_node){
-				self::send_product_update($product_node['post_id'], $product_node['action']);
-				unset($products_list[$key]);
-			}
-		} else {	// sending the products as a batch
-			self::send_cron_products_as_batch($products_list);
-			$products_list = get_option('cron_product_list');
+		try {
+    		$products_list = get_option('cron_product_list');
+    		$categorys_list = get_option('cron_category_list');
+    		if (!$products_list && !$categorys_list){
+    			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+    			delete_option('cron_in_progress');
+    			return;
+    		} 
+    		if ($products_list){
+        		if (count($products_list) <= self::SINGLES_TO_BATCH_THRESHOLD){
+        			foreach ($products_list as $key => $product_node){
+        				self::send_product_update($product_node['element_id'], $product_node['action']);
+        				unset($products_list[$key]);
+        			}
+        		} else {	// sending the products as a batch
+        			self::send_cron_products_as_batch($products_list);
+        			$products_list = get_option('cron_product_list');
+        		}
+        		
+        		if (count($products_list) == 0){
+        			delete_option('cron_product_list');
+        			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+        		} else {
+        			$err_msg = "not managed to send " . count($products_list) . " products"; 
+        			self::send_error_report($err_msg);
+        		}
+    		}
+        
+    		if ($categorys_list){
+        		if (count($categorys_list) >= 0){    		    
+        		    self::send_categories_as_batch($categorys_list);
+        		    $categorys_list = get_option('cron_category_list');
+        		}
+        		if (count($categorys_list) == 0){
+        		    delete_option('cron_category_list');
+        		    wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
+        		} else {
+        		    $err_msg = "not managed to send " . count($categorys_list) . " categories";
+        		    self::send_error_report($err_msg);
+        		}
+    		}
+		} catch (Exception $e) {
+        	$err_msg = "execute_update_request exception raised msg: ". $e->getMessage() . ", from url: " . get_option('siteurl');
+        	self::send_error_report($err_msg);
 		}
 		
-		if (count($products_list) == 0){
-			delete_option('cron_product_list');
-			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
-		} else {
-			$err_msg = "not managed to send " . count($products_list) . " products"; 
-			self::send_error_report($err_msg);
-		}	
 		delete_option('cron_in_progress');
 	}
-	
-	// TODO: merge with handle_cron_request()
-	function execute_update_request(){
-		$products_list = get_option('cron_product_list');
-		
-		if (count($products_list) <= self::SINGLES_TO_BATCH_THRESHOLD){
-			foreach ($products_list as $key => $product_node){
-				self::send_product_update($product_node['post_id'], $product_node['action']);
-				unset($products_list[$key]);
-			}
-		} else {	// sending the products as a batch
-			self::send_cron_products_as_batch($products_list);
-			$products_list = get_option('cron_product_list');
-		}
-		
-		if (count($products_list) == 0){
-			delete_option('cron_product_list');
-			$err_msg = "sent products succesfully outside the cron handler";
-			self::send_error_report($err_msg);
-		} else {
-			$err_msg = "not managed to send " . count($products_list) . " products outside the cron handler";
-			self::send_error_report($err_msg);
-		}	
-	}
+
 	
 	function send_cron_products_as_batch($products_list){
 		$batch_size = get_option( 'wcis_batch_size' );
 		$total_num_of_products = count($products_list);
 		$total_num_of_batches = ceil($total_num_of_products / $batch_size);
 		$iteration = 1;
+		$product_array = array();
 		
-		foreach ($products_list as $key => $product_node)
-		{
-			$product = self::get_product_from_post($product_node['post_id']);
+		foreach ($products_list as $key => $product_node){
+			$product = self::get_product_from_post($product_node['element_id']);
 			$product['topic'] = $product_node['action'];	// insert/update/remove
 			$product_array[] = $product;
 			
@@ -1209,10 +1333,10 @@ class WCISPlugin {
 		$resp = wp_remote_post( $url, $args );
 	}
 	
-	// FullText search
+	// FullText search Section
 	function pre_get_posts_handler( $wp_query, $is_retry = false){
 		if( is_search() && $wp_query->is_main_query() && !is_admin()){
-			$query = $wp_query->query_vars;
+			$query = $wp_query->query_vars;			
 			$url_args = add_query_arg(null, null);
 			
 			$url_params = array();
@@ -1222,13 +1346,9 @@ class WCISPlugin {
 					$new_key = str_replace('/?', '', $key);
 					$url_params[$new_key] = $url_params[$key];
 					unset($url_params[$key]);
-				} 
-			}		
+				}
+			}
 			wp_schedule_single_event(time(), 'instantsearchplus_send_logging_record', array($url_params));
-			
-			delete_option('wcis_did_you_mean_enabled');
-			delete_option('wcis_did_you_mean_fields');
-			delete_option('wcis_search_query');
 			
 			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false){
 				return self::on_fulltext_disable_query($wp_query);
@@ -1282,15 +1402,6 @@ class WCISPlugin {
 					update_option('just_created_site', true);
 					delete_option('fulltext_disabled');
 					return $wp_query;
-				} elseif ((array_key_exists('alternatives', $response_json) && 
-						   			count($response_json['alternatives']) > 0) || 
-						  (array_key_exists('results_for', $response_json) &&
-						  		$response_json['results_for'] != null  &&
-						  		$response_json['results_for'] != '' &&
-								!self::did_you_mean_is_same_words($q, $response_json['results_for'])) 
-					){
-					// if there are alternatives(did you mean) or search query not equals to "result for query" (typo)  
-					update_option('wcis_did_you_mean_enabled', true);
 				}
 				
 				if (get_option('just_created_site')){
@@ -1307,21 +1418,16 @@ class WCISPlugin {
 					return self::on_fulltext_disable_query($wp_query);
 				}
 					
-				update_option('wcis_fulltext_ids', $product_ids);
+                $this->wcis_fulltext_ids = $product_ids;
 				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0){
-					update_option('wcis_total_results', $response_json['total_results']);
+				    $this->wcis_total_results = $response_json['total_results'];
 				} else {
-					update_option('wcis_total_results', -1);
+				    $this->wcis_total_results = -1;
 				}
 				
 				// did you mean section
 				$wp_query->query_vars['s'] = $q;
-				if (get_option('wcis_did_you_mean_enabled')){
-					self::handle_did_you_mean_result($response_json);
-				} else { 
-					update_option("wcis_search_query", $wp_query->query_vars['s']);
-				}
-				
+				self::handle_did_you_mean_result($response_json);
 			}
 					
 		} else {
@@ -1346,11 +1452,12 @@ class WCISPlugin {
 		global $wp_query;
 		$did_you_mean_fields = array();
 		// if original search query is different from the result's query
-		if (array_key_exists('results_for', $response_json) && 
+		if (array_key_exists('results_for', $response_json)   && 
+		        $response_json['results_for'] != null         && 
+		        $response_json['results_for'] != ''           &&
 				!self::did_you_mean_is_same_words($wp_query->query_vars['s'], 
 												  $response_json['results_for'])){
 
-			update_option('wcis_results_for', $response_json['results_for']);
 			$did_you_mean_fields['original_query'] = $wp_query->query_vars['s'];
 			$wp_query->query_vars['s'] = $response_json['results_for'];
 			$did_you_mean_fields['fixed_query'] = $response_json['results_for'];
@@ -1362,8 +1469,12 @@ class WCISPlugin {
 			}
 			$did_you_mean_fields['alternative_terms'] = $alternative_terms;
 		}
-		
-		update_option('wcis_did_you_mean_fields', $did_you_mean_fields);
+		if (empty($did_you_mean_fields)){
+		    $this->wcis_search_query = $wp_query->query_vars['s'];
+		} else { 
+// 		    if there are alternatives(did you mean) or search query not equals to "result for query" (typo)
+		    $this->wcis_did_you_mean_fields = $did_you_mean_fields;
+		}
 	}
 	
 	public function did_you_mean_is_same_words($original, $fixed){
@@ -1381,24 +1492,24 @@ class WCISPlugin {
 	
 	
 	public function posts_search_handler($search){
-		if( is_search() && !is_admin() && get_option('wcis_fulltext_ids')){
-			$search = ''; // disable WordPress search
+		if( is_search() && !is_admin() && (get_option('fulltext_disabled') == false)){			
+		    $search = ''; // disable WordPress search
 		}
 		return $search;	
 	}
 	
 	function post_limits_handler($limit){
-		if( is_search() && get_option('wcis_fulltext_ids')){			
+		if( is_search() && (get_option('fulltext_disabled') == false)){			
 			$limit = 'LIMIT 0, ' . get_option('posts_per_page');
 		}
 		return $limit;
 	}
 	
 	function the_posts_handler($posts){
-		if (is_search() && (get_option('wcis_fulltext_ids') || get_option('wcis_total_results') == -1)){
+		if (is_search() && (get_option('fulltext_disabled') == false)){
+			global $wp_query;
 			
-			global $wp_query;			
-			$total_results = get_option('wcis_total_results');	
+			$total_results = $this->wcis_total_results;	
 			if ($total_results == -1){
 				$total_results = 0;
 			}
@@ -1408,20 +1519,18 @@ class WCISPlugin {
 // 			$wp_query->query_vars['post_type'] = 'product';
 			$wp_query->query_vars['posts_per_page'] = get_option('posts_per_page');
 			
-			$fulltext_ids = get_option('wcis_fulltext_ids');
-			
 			unset($posts);
 			$posts = array();
 			if ($total_results > 0){
-				foreach ($fulltext_ids as $product_id){
+			    foreach ($this->wcis_fulltext_ids as $product_id){
 					$post = get_post($product_id);
 					$posts[] = $post;
 				}
 			}
+			unset($this->wcis_fulltext_ids);
+			$this->wcis_total_results = 0;
 		}
 
-		delete_option('wcis_fulltext_ids');
-		delete_option('wcis_total_results');
 		return $posts;
 	}	
 	
@@ -1447,7 +1556,7 @@ class WCISPlugin {
 		
 		return $current_text;
 	}
-	// FullText search end
+	// FullText search Section end
 
 	function admin_init_handler(){
 		if ( isset($_GET['instantsearchplus']) && $_GET['instantsearchplus'] == 'remove_over_capacity_alert' ){
