@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,10 @@ Search-as-you-type product names, descriptions, images, and prices from the firs
 Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions  make it a must-have for your eCommerce store.
 
 Play with our demo site at http://woocommerce.instantsearchplus.com  
-To learn more please visit http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
+
+Enjoy our 7- day FREE TRIAL and then sign up to one of our affordable monthly subscriptions from $4.99. To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
+InstantSearch+ is free up to 50 products.
+
 
 [youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
 
@@ -84,12 +87,18 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 1. World-class autocomplete dropdown with WooCommerce products and popular searches.
 2. WordPress compatible dashboard to see insights and customize the widget.
-
+3. Full text search with "did-you-mean" typo correction and search terms highlight - full page
+4. Full text search with "did-you-mean" typo correction and search terms highlight - zoom
 
 
 
 
 == Changelog ==
+
+= 1.2.3 = 
+* new - search categories
+* multiple languages support on "did you mean"
+* fix - handle multiple full text search requests
 
 = 1.2.2 = 
 * InstantSearch+ search box widget improvements + widget configurations
