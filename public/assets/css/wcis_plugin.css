@@ -9,7 +9,6 @@ form.isp_search_box_form input[type="text"].isp_search_box_input {
 	border: 2px solid #C9CCCF;
 	box-shadow: none;
 	font-size: 1em;
-	height: auto;
 	padding: 0.5em 2em 0.5em 1em;
 	margin: 0.2rem 0.2rem 0.2rem 0.2rem;	
 	font-family: inherit;
@@ -24,6 +23,7 @@ form.isp_search_box_form input[type="text"].isp_search_box_input {
 	transition: border 0.5s, opacity 0.5s;
 	
 	display: block;
+	max-width: 100%;
 }
 
 form.isp_search_box_form input[type="text"].isp_search_box_input:focus{
