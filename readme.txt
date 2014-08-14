@@ -96,7 +96,7 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 == Changelog ==
 
 = 1.2.3 = 
-* new - search categories
+* new - search by categories
 * multiple languages support on "did you mean"
 * fix - handle multiple full text search requests
 
