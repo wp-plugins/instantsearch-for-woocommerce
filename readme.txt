@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.2.3
+Stable tag: 1.2.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,30 +70,45 @@ Having issues?  contact support@instantsearchplus.com
 
 No.  Once you install the plugin you will have our dashboard and customization right in the WordPress admin.
 
-= Really Free?  Do you offer premium features? =
+= What is the difference between the free and the Premium service versions =
 
-Our basic offering is indeed free and works great for small WooCommerce sites.  We do offer premium packages for higher capacity needs - explore them in the WordPress area for InstantSearch+.
+Full details are here: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce/
+Basically our Premium versions contain more advanced customization, support, additional service capacity and monitoring.  You can always start with our Free plan and upgrade.
 
-= Does InstantSearch+ support WooCommerce Multisite? =
+= Do you offer Trials? =
 
-Not yet.  It's in the makes.
+Yes - 7 days free trial
 
 = Can InstantSearch+ work with my searchbox? =
 
 Yes - InstantSearch+ can work with any html inputbox on your page. Be that a WordPress Widget or a custom template
 
+= How can I add a searchbox to my site header? =
+
+Go to Wordpress admin => Appearance => Widgets and include the InstantSearch+ Search Widget. 
+
+= I want to add a searchbox to my theme and make it work with InstantSearch+ - how can I? =
+Simply add HTML based form to your Wordpress theme like this and we’ll pick it from there:
+<form action="/">
+ 	<input type="text" name="s" placeholder="Product search">
+ 	<input type="hidden" name="post_type" value="product">
+</form>
 
 == Screenshots ==
 
 1. World-class autocomplete dropdown with WooCommerce products and popular searches.
 2. WordPress compatible dashboard to see insights and customize the widget.
-3. Full text search with "did-you-mean" typo correction and search terms highlight - full page
-4. Full text search with "did-you-mean" typo correction and search terms highlight - zoom
+3. Full text search with "did-you-mean", typo correction and search terms highlight - full page
+4. Full text search with "did-you-mean", typo correction and search terms highlight - zoom
 
 
 
 
 == Changelog ==
+
+= 1.2.4 = 
+* highlight terms on full text search improvements (few new classes)
+* new option (InstantsSearch+ dashboard => Customize tab => Force searchbox to products-only search) - if chosen, won't take over search boxes that does not have post_type=product input, those search boxes will continue to return WordPress default results.  
 
 = 1.2.3 = 
 * new - search by categories
