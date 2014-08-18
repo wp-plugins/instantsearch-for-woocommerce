@@ -89,10 +89,10 @@ Go to Wordpress admin => Appearance => Widgets and include the InstantSearch+ Se
 
 = I want to add a searchbox to my theme and make it work with InstantSearch+ - how can I? =
 Simply add HTML based form to your Wordpress theme like this and we’ll pick it from there:
-<form action="/">
+`<form action="/">
  	<input type="text" name="s" placeholder="Product search">
  	<input type="hidden" name="post_type" value="product">
-</form>
+</form>`
 
 == Screenshots ==
 
