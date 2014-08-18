@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.3';
+	const VERSION = '1.2.4';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -634,7 +634,7 @@ class WCISPlugin {
     			'products'						=> $product_array,
     			'is_additional_fetch_required' 	=> false,
     	);    	
-    	 
+    	wp_reset_postdata();
     	self::send_products_batch($send_products);	
     }
     
@@ -1363,6 +1363,7 @@ class WCISPlugin {
 			$q = str_replace('\\', '', $q);
 			
 			$page_num = ($query['paged'] == 0) ? 1 : $query['paged'];
+			$post_type = (array_key_exists('post_type', $query)) ? $query['post_type'] : 'post';
 			
 			// TODO: if posts_per_page < 1 set it to 10
 			$results_per_page = get_option('posts_per_page');
@@ -1377,7 +1378,8 @@ class WCISPlugin {
 									'store_id' 				=> get_current_blog_id(),
 									'p' 					=> $page_num,				// requested page number
 									'products_per_page'		=> $results_per_page,
-									'is_admin_view'			=> is_admin_bar_showing()			
+									'is_admin_view'			=> is_admin_bar_showing(),
+					                'post_type'             => $post_type			
 					),
 					'timeout' => 20,
 			);
@@ -1643,15 +1645,13 @@ class WCISPlugin {
 	}
 	
 	
-	
 	function add_woocommerce_integrations_handler($integrations){
 		require_once( plugin_dir_path( __FILE__ ) . 'wcis_integration.php' );
 		$integrations[] = 'WCISIntegration';
 		return $integrations;
 	}
 	
-	
-	
+
 	function content_filter_shortcode($content){		
 		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/s';
 		while(preg_match($pattern, $content)){
