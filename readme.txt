@@ -1,10 +1,10 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
 Donate link:
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, predictive search, wordpress ecommerce, highlight terms, search highlight
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight
 Requires at least: 3.3
 Tested up to: 3.9
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,13 +52,22 @@ InstantSearch+ is free up to 50 products.
 * Customizable look and feel to fit your store frontend
 * Desktop, tablet and mobile theme supported
 
+= Enhanced Search Results Page =
+* **Did you mean** - provides alternative suggestions for misspelled searches
+* **search term highlighting** - visual indication of the end user search term in found results
 
 == Installation ==
 1. Navigate to the 'Add New' in the plugins dashboard
 2. Search for 'InstantSearch+ for WooCommerce'
 3. Click 'Install Now'
 4. Activate the plugin on the Plugin dashboard
-5. In case you do not have a search box, go to WordPress admin page ==> Appearance ==> Widgets and drag InstantSearch+ Search Box widget (or any other search widget) to your preferred location.
+5. In case you do not have a search box do one of the following:
+	* Add search box widget - go to WordPress admin page ==> Appearance ==> Widgets and drag InstantSearch+ Search Box widget (or any other search widget) to your preferred location.
+	* Add html code to your theme - Simply add HTML based form to your WordPress theme like this and we’ll pick it from there  
+	  `<form action="/">`  
+		  `<input type="text" name="s" placeholder="Product search">`  
+		  `<input type="hidden" name="post_type" value="product">`  
+	  `</form>`
 
 Having issues?  contact support@instantsearchplus.com
 
@@ -96,15 +105,18 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 == Screenshots ==
 
-1. World-class autocomplete dropdown with WooCommerce products and popular searches.
+1. World-class autocomplete dropdown with WooCommerce products search and popular searches.
 2. WordPress compatible dashboard to see insights and customize the widget.
-3. Full text search with "did-you-mean", typo correction and search terms highlight - full page
-4. Full text search with "did-you-mean", typo correction and search terms highlight - zoom
+3. Full text product search with "did-you-mean", typo correction and search terms highlight - full page
+4. Full text product search with "did-you-mean", typo correction and search terms highlight - zoom
 
 
 
 
 == Changelog ==
+
+= 1.2.5 = 
+* support for localhost and sites in maintenance mode
 
 = 1.2.4 = 
 * highlight terms on full text search improvements (few new classes)
