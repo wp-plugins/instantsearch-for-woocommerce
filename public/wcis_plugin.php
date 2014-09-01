@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.4';
+	const VERSION = '1.2.5';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -101,6 +101,7 @@ class WCISPlugin {
         add_action('instantsearchplus_send_logging_record', array($this, 'send_logging_record'), 10, 1);
         
         add_action('instantsearchplus_send_all_categories', array($this, 'send_categories_as_batch'));
+        add_action('instantsearchplus_send_batches_if_unreachable', array($this, 'send_batches_if_unreachable'));
         
         // FullText search
         add_filter( 'posts_search', array( $this, 'posts_search_handler' ) );
@@ -223,6 +224,7 @@ class WCISPlugin {
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_check_alerst' ); 
 		wp_clear_scheduled_hook( 'instantsearchplus_send_logging_record' );
 		wp_clear_scheduled_hook( 'instantsearchplus_send_all_categories' );
+		wp_clear_scheduled_hook( 'instantsearchplus_send_batches_if_unreachable' );
 		
 		delete_option('is_activation_triggered');
 		
@@ -302,6 +304,7 @@ class WCISPlugin {
 		delete_option('cron_product_list');
 		delete_option('cron_category_list');
 		delete_option('cron_in_progress');
+		delete_option('cron_send_batches_disable');
 		delete_option('wcic_site_alert');
 		delete_option('wcis_just_created_alert');
 	}
@@ -557,6 +560,7 @@ class WCISPlugin {
 		                
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches){
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
+		                    wp_schedule_single_event(time() + (self::CRON_SEND_CATEGORIES_TIME_INTERVAL * 10 /*5 minutes*/), 'instantsearchplus_send_batches_if_unreachable');
 		                	$is_additional_fetch_required = true;
 		                }
 		                
@@ -616,7 +620,7 @@ class WCISPlugin {
         }
     }
     
-    private function puch_wc_batch($batch_num){
+    private function push_wc_batch($batch_num){
     	$loop = self::query_products($batch_num);
     	$product_array = array();
     	$total       = $loop->found_posts;		// total number of products
@@ -965,6 +969,25 @@ class WCISPlugin {
         }
     }
     
+    function send_batches_if_unreachable($batch_num = 0){  
+        if ($batch_num == 0){
+            $err_msg = "site: " . get_option('siteurl') . "unreachable, sending batches...";
+            self::send_error_report($err_msg);
+            $batch_num = get_option('max_num_of_batches');
+        }
+    
+        $loop = self::query_products($batch_num);
+        $total_pages = $loop->max_num_pages;	// total number of batches
+    
+        while ($total_pages >= $batch_num){
+            if (get_option('cron_send_batches_disable')){
+                return;
+            }
+            self::push_wc_batch($batch_num);
+            $batch_num++;
+        }
+    }
+    
     private function send_product_update($post_id, $action)
     {
         $product = self::get_product_from_post($post_id);
@@ -1010,7 +1033,6 @@ class WCISPlugin {
 		);
 		
 		$resp = wp_remote_post( $url, $args );
-
 	}
 
 	/**
@@ -1019,13 +1041,11 @@ class WCISPlugin {
 	 * @since    1.0.0
 	 */
 	public function load_plugin_textdomain() {
-
 		$domain = $this->plugin_slug;
 		$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
 
 		load_textdomain( 'WCISPlugin', plugin_dir_path( dirname( __FILE__ ) ) . 'languages/' . $domain . '-' . $locale . '.mo' );
 		load_plugin_textdomain( 'WCISPlugin', FALSE, basename( plugin_dir_path( dirname( __FILE__ ) ) ) . '/languages/' );
-
 	}
 
 	/**
@@ -1160,8 +1180,13 @@ class WCISPlugin {
 			    status_header(200);
 			    exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
+			    wp_clear_scheduled_hook( 'instantsearchplus_send_batches_if_unreachable' );
+			    if (!get_option('cron_send_batches_disable')){
+			        update_option('cron_send_batches_disable', true);
+			    }
+			    
 				$batch_num = $req->query_vars['instantsearchplus_parameter'];			
-				self::puch_wc_batch($batch_num);
+				self::push_wc_batch($batch_num);
 				status_header(200);
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'change_timeframe'){
