@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.5';
+	const VERSION = '1.2.6';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -77,8 +77,11 @@ class WCISPlugin {
         add_action( 'wpmu_new_blog', array( $this, 'activate_new_site' ) );
                 
 //         add_action( 'publish_post', array( $this, 'on_product_update' ));
+
+        // product change handlers
         add_action('save_post', array( $this, 'on_product_save'));
         add_action('trashed_post', array( $this, 'on_product_delete'));
+        add_action('woocommerce_order_status_on-hold', array( $this, 'quantity_change_handler'), 501);        
         
 		add_action ( 'edit_product_cat', array( $this, 'on_category_edit' )); 
 		add_action ( 'create_product_cat', array( $this, 'on_category_create' )); 
@@ -123,6 +126,8 @@ class WCISPlugin {
         
         // InstantSearch+ search box widget
         add_action( 'widgets_init', array( $this, 'widgets_registration_handler' ) );
+        
+        add_action( 'woocommerce_scheduled_sales', array( $this, 'on_scheduled_sales'));
         
 	}
 
@@ -665,6 +670,19 @@ class WCISPlugin {
     		$thumbnail = array_pop($result);
     	}
     	
+    	// handling scheduled sale price update
+    	if (!$woocommerce_ver_below_2_1){
+    	    $sale_price_dates_from = get_post_meta( $post_id, '_sale_price_dates_from', true );
+    	    $sale_price_dates_to = get_post_meta( $post_id, '_sale_price_dates_to', true );
+    	    self::schedule_sale_price_update($post_id, null);
+    	    if ($sale_price_dates_from){
+    	        self::schedule_sale_price_update($post_id, $sale_price_dates_from);
+    	    } 
+    	    if ($sale_price_dates_to){
+    	        self::schedule_sale_price_update($post_id, $sale_price_dates_to);
+    	    }
+    	}
+    	
     	$send_product = array('product_id' => $product->id,
     			'currency' => get_woocommerce_currency(),
     			'price' =>$product->get_price(),
@@ -768,10 +786,28 @@ class WCISPlugin {
         self::on_product_update($post_id, $action);
     }
     
+    public function quantity_change_handler($order_id){
+        if (!version_compare( WOOCOMMERCE_VERSION, '2.1', '<' )){
+            $order = new WC_Order( $order_id );
+            foreach($order->get_items() as $item){
+                $product_id = $item['product_id'];
+                $product = new WC_Product($product_id);
+                if (!$product->managing_stock()){
+                    continue;
+                }
+                $quantity = $product->get_stock_quantity();
+                if ($item['qty'] == $quantity){
+                    // update out of stock
+                    self::on_product_update($product_id, 'update');
+                }    
+            }
+        }
+    } 
+    
     public static function on_product_update($post_id, $action){
         $products_list = get_option('cron_product_list');
         $timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
-         
+        
         if(get_option('wcis_timeframe')){
             $timeframe = get_option('wcis_timeframe');
         } else {
@@ -872,6 +908,35 @@ class WCISPlugin {
     	}
     }
 
+    private function schedule_sale_price_update($post_id, $sale_price_dates = null){
+        if ($sale_price_dates != null && $sale_price_dates < time())
+            return;
+        $product_list_by_date = get_option('cron_update_product_list_by_date');
+        if ($sale_price_dates != null){
+            if ($product_list_by_date){
+                $element_node = array(
+                        'id' 	     => $post_id,
+                        'time_stamp' => $sale_price_dates
+                );
+                array_push($product_list_by_date, $element_node);
+        
+            } else{
+                $product_list_by_date = array(0 =>
+                    				array(
+                    				        'id' 	       => $post_id,
+                    				        'time_stamp'   => $sale_price_dates
+                    				)
+                );
+            } 
+        } else { // removing all post's scheduled updates
+            foreach ($product_list_by_date as $key => $value){
+                if ($value['id'] == $post_id){
+                    unset($product_list_by_date[$key]);
+                }
+            }
+        }
+        update_option('cron_update_product_list_by_date', $product_list_by_date);
+    }
     
     private function send_products_batch($products, $is_retry = false){
     	$total_products 				= $products['total_products'];
@@ -1709,5 +1774,20 @@ class WCISPlugin {
 		return $content;
 	}
 	
+	
+	function on_scheduled_sales(){
+	    $product_list_by_date = get_option('cron_update_product_list_by_date');
+	    if (!$product_list_by_date){
+	        return;
+	    }
+	    
+	    foreach ($product_list_by_date as $key => $value){
+	        if ($value['time_stamp'] <= time()){
+	            self::on_product_update($value['id'], 'update');
+	            unset($product_list_by_date[$key]);
+	        }
+	    }
+	    update_option('cron_update_product_list_by_date', $product_list_by_date);
+	}
 }
 ?>
