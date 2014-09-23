@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.6';
+	const VERSION = '1.2.7';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -81,7 +81,9 @@ class WCISPlugin {
         // product change handlers
         add_action('save_post', array( $this, 'on_product_save'));
         add_action('trashed_post', array( $this, 'on_product_delete'));
-        add_action('woocommerce_order_status_on-hold', array( $this, 'quantity_change_handler'), 501);        
+        add_action('woocommerce_order_status_on-hold', array( $this, 'quantity_change_handler'), 501);
+        add_action('woocommerce_order_status_processing', array( $this, 'quantity_change_handler'), 501);
+        add_action('woocommerce_order_status_pending', array( $this, 'quantity_change_handler'), 501);
         
 		add_action ( 'edit_product_cat', array( $this, 'on_category_edit' )); 
 		add_action ( 'create_product_cat', array( $this, 'on_category_create' )); 
@@ -674,13 +676,20 @@ class WCISPlugin {
     	if (!$woocommerce_ver_below_2_1){
     	    $sale_price_dates_from = get_post_meta( $post_id, '_sale_price_dates_from', true );
     	    $sale_price_dates_to = get_post_meta( $post_id, '_sale_price_dates_to', true );
-    	    self::schedule_sale_price_update($post_id, null);
+    	    if ($sale_price_dates_from || $sale_price_dates_to){
+    	        self::schedule_sale_price_update($post_id, null);
+    	    }
     	    if ($sale_price_dates_from){
     	        self::schedule_sale_price_update($post_id, $sale_price_dates_from);
     	    } 
     	    if ($sale_price_dates_to){
     	        self::schedule_sale_price_update($post_id, $sale_price_dates_to);
     	    }
+    	}
+    	
+    	$product_tags = array();
+    	foreach (wp_get_post_terms($post_id, 'product_tag') as $tag){
+    	    $product_tags[] = $tag->name;
     	}
     	
     	$send_product = array('product_id' => $product->id,
@@ -694,6 +703,7 @@ class WCISPlugin {
     			'name'=>$product->get_title(),
     			'sku' => $product->get_sku(),
     			'categories'=>$product->get_categories(),
+    	        'tag' => $product_tags,
     			'store_id'=>get_current_blog_id(),
     			'identifier' => (string)$product->id,
     	
@@ -912,6 +922,8 @@ class WCISPlugin {
         if ($sale_price_dates != null && $sale_price_dates < time())
             return;
         $product_list_by_date = get_option('cron_update_product_list_by_date');
+        if ($sale_price_dates == null && !$product_list_by_date)
+            return;
         if ($sale_price_dates != null){
             if ($product_list_by_date){
                 $element_node = array(
@@ -929,9 +941,11 @@ class WCISPlugin {
                 );
             } 
         } else { // removing all post's scheduled updates
-            foreach ($product_list_by_date as $key => $value){
-                if ($value['id'] == $post_id){
-                    unset($product_list_by_date[$key]);
+            if ($product_list_by_date){
+                foreach ($product_list_by_date as $key => $value){
+                    if ($value['id'] == $post_id){
+                        unset($product_list_by_date[$key]);
+                    }
                 }
             }
         }
@@ -1721,6 +1735,10 @@ class WCISPlugin {
 			if (array_key_exists('timeframe', $response_json)){
 				self::update_timeframe($response_json['timeframe']);
 			}
+		}
+		
+		if (get_option('cron_in_progress')){
+		    delete_option('cron_in_progress');
 		}
 	}
 	
