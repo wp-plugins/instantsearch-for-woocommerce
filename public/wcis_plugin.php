@@ -314,6 +314,7 @@ class WCISPlugin {
 		delete_option('cron_send_batches_disable');
 		delete_option('wcic_site_alert');
 		delete_option('wcis_just_created_alert');
+		delete_option('cron_update_product_list_by_date');
 	}
 	
 	/**
