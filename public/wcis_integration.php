@@ -72,19 +72,71 @@ class WCISIntegration extends WC_Integration{
 			<tr valign="top">
 				<th scope="row" class="titledesc">
 					<label for="<?php echo esc_attr( $field ); ?>"><?php echo wp_kses_post( $data['title'] ); ?></label>
-					<?php echo $this->get_tooltip_html( $data ); ?>
+					<?php echo $this->wcis_get_tooltip_html( $data ); ?>
 				</th>
 				<td class="forminp">
 					<fieldset>
 						<legend class="screen-reader-text"><span><?php echo wp_kses_post( $data['title'] ); ?></span></legend>
-						<button class="<?php echo esc_attr( $data['class'] ); ?>" type="button" name="<?php echo esc_attr( $field ); ?>" id="<?php echo esc_attr( $field ); ?>" style="<?php echo esc_attr( $data['css'] ); ?>" <?php echo $this->get_custom_attribute_html( $data ); ?>><?php echo wp_kses_post( $data['button_name'] ); ?></button>
-						<?php echo $this->get_description_html( $data ); ?>
+						<button class="<?php echo esc_attr( $data['class'] ); ?>" type="button" name="<?php echo esc_attr( $field ); ?>" id="<?php echo esc_attr( $field ); ?>" style="<?php echo esc_attr( $data['css'] ); ?>" <?php echo $this->wcis_get_custom_attribute_html( $data ); ?>><?php echo wp_kses_post( $data['button_name'] ); ?></button>
+						<?php echo $this->wcis_get_description_html( $data ); ?>
 					</fieldset>
 				</td>
 			</tr>
 			<?php
 			return ob_get_clean();
 		}
+		
+		
+	/*
+	 * copy of 3 functions that are implemented in WooCommerce version 2.1, in order to prevent an error on WooCommerce 2.0
+	 */	
+    public function wcis_get_tooltip_html( $data ) {        
+        if ( !(version_compare( WOOCOMMERCE_VERSION, '2.1', '<' )) ){
+            return $this->get_tooltip_html( $data );
+        }
+            
+        if ( $data['desc_tip'] === true ) {
+            $tip = $data['description'];
+        } elseif ( ! empty( $data['desc_tip'] ) ) {
+            $tip = $data['desc_tip'];
+        } else {
+            $tip = '';
+        }
+        global $woocommerce;
+        return $tip ? '<img class="help_tip" data-tip="' . esc_attr( $tip ) . '" src="' . $woocommerce->plugin_url() . '/assets/images/help.png" height="16" width="16" />' : '';
+    }
+    
+    public function wcis_get_custom_attribute_html( $data ) {
+        if ( !(version_compare( WOOCOMMERCE_VERSION, '2.1', '<' )) ){
+            return $this->get_custom_attribute_html( $data );
+        }
+
+        $custom_attributes = array();
+    
+        if ( ! empty( $data['custom_attributes'] ) && is_array( $data['custom_attributes'] ) )
+        foreach ( $data['custom_attributes'] as $attribute => $attribute_value )
+            $custom_attributes[] = esc_attr( $attribute ) . '="' . esc_attr( $attribute_value ) . '"';
+    
+        return implode( ' ', $custom_attributes );
+    }
+    
+    public function wcis_get_description_html( $data ) {
+        if ( !(version_compare( WOOCOMMERCE_VERSION, '2.1', '<' )) ){
+           return $this->get_description_html( $data );
+        }   
+
+        if ( $data['desc_tip'] === true ) {
+            $description = '';
+        } elseif ( ! empty( $data['desc_tip'] ) ) {
+            $description = $data['description'];
+        } elseif ( ! empty( $data['description'] ) ) {
+            $description = $data['description'];
+        } else {
+            $description = '';
+        }
+    
+        return $description ? '<p class="description">' . wp_kses_post( $description ) . '</p>' . "\n" : '';
+    }
 }
 
 
