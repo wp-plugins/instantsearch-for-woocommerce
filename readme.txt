@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -115,9 +115,16 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 == Changelog ==
 
+= 1.2.7 = 
+* bug fix - product quantity update after orders
+* bug fix - warning after install
+* WooCommerce integration bug fix for WooCommerce versions 2.0.x
+* Compatible with WooCommerce 2.2.x
+
 = 1.2.6 = 
 * support to scheduled sale prices dates - product's sale price will be up-to-date
 * out of stock update - when product's order turns its quantity to 0 (if manage stock is enabled)
+* Compatible with WordPress 4.0
 
 = 1.2.5 = 
 * support for localhost and sites in maintenance mode
