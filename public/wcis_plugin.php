@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.7';
+	const VERSION = '1.2.8';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -62,6 +62,11 @@ class WCISPlugin {
 	private $wcis_total_results = 0;
 	private $wcis_did_you_mean_fields = null;
 	private $wcis_search_query = null;
+	
+	private $facets = null;
+	private $facets_completed = null;
+	private $facets_required = null;
+	private $facets_narrow = null;
 
 	/**
 	 * Initialize the plugin by setting localization and loading public scripts
@@ -724,6 +729,20 @@ class WCISPlugin {
 	    	try{
 	    		$send_product['price_compare_at_price'] = $product->get_regular_price();
 	    		$variable = new WC_Product_Variable($post_id);
+	    		
+	    		$variations = $variable->get_available_variations();
+	    		$variations_sku = '';
+	    		if (!empty($variations)){
+	    		    foreach ($variations as $variation){
+	    		        if ($product->get_sku() != $variation['sku']){
+	    		            $variations_sku .= $variation['sku'] . ' ';
+	    		        }
+	    		    }
+	    		}
+	    		$send_product['variations_sku'] = $variations_sku;
+	    		$send_product['attributes'] = $variable->get_variation_attributes();
+	    		$send_product['total_variable_stock'] = $variable->get_total_stock();
+	    		
 	    		$send_product['price_min'] = $variable->get_variation_price('min');
 	    		$send_product['price_max'] = $variable->get_variation_price('max');
 	    		$send_product['price_min_compare_at_price'] = $variable->get_variation_regular_price('min');
@@ -815,7 +834,7 @@ class WCISPlugin {
         }
     } 
     
-    public static function on_product_update($post_id, $action){
+    public function on_product_update($post_id, $action){
         $products_list = get_option('cron_product_list');
         $timestamp = wp_next_scheduled( 'instantsearchplus_cron_request_event' );
         
@@ -1196,8 +1215,22 @@ class WCISPlugin {
 	        	$args .= 'original_query=' . urlencode($this->wcis_search_query) . '&';
 	        	$this->wcis_search_query = null;
 	        }
+	        
+	        if (!get_option('just_created_site') && $this->facets_required == true){
+	            $args .= 'facets_required=1&';
+	        }
 
 	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
+	        
+	        if (!get_option('just_created_site') && $this->facets_required == true){
+	            $isp_facets_fields = array(); //$this->facets_narrow
+	            $isp_facets_fields['facets'] = $this->facets;
+	            if ($this->facets_narrow){
+	                $isp_facets_fields['narrow'] = $this->facets_narrow;
+	            }
+	            
+	            wp_localize_script( $this->plugin_slug . '-fulltext', 'isp_facets_fields', $isp_facets_fields );
+	        }
         }
 	}
 	
@@ -1439,7 +1472,7 @@ class WCISPlugin {
 	}
 	
 	// FullText search Section
-	function pre_get_posts_handler( $wp_query, $is_retry = false){
+	function pre_get_posts_handler( $wp_query){
 		if( is_search() && $wp_query->is_main_query() && !is_admin()){
 			$query = $wp_query->query_vars;			
 			$url_args = add_query_arg(null, null);
@@ -1467,6 +1500,12 @@ class WCISPlugin {
 			// cleaning search query from '\'
 			$q = str_replace('\\', '', $q);
 			
+			// initializing class's full text related fields
+			$this->facets_required = null;
+			$this->facets = null;
+			$this->facets_completed = null;
+			$this->facets_narrow = null;
+			
 			$page_num = ($query['paged'] == 0) ? 1 : $query['paged'];
 			$post_type = (array_key_exists('post_type', $query)) ? $query['post_type'] : 'post';
 			
@@ -1484,22 +1523,27 @@ class WCISPlugin {
 									'p' 					=> $page_num,				// requested page number
 									'products_per_page'		=> $results_per_page,
 									'is_admin_view'			=> is_admin_bar_showing(),
-					                'post_type'             => $post_type			
+					                'post_type'             => $post_type,
+					                'facets_required'       => 1
 					),
 					'timeout' => 20,
 			);
+			
+			$narrow = null;
+			if (strpos($url_args, '&narrow=') !== false){
+			    $match = array();
+			    $pattern = '/\&narrow=([^\&\#\/]*)/';
+			    preg_match($pattern, $url_args, $match);
+			    $narrow =  urldecode($match[1]);
+			    $args['body']['narrow'] = $narrow;
+			}
+			
 			$resp = wp_remote_post( $url, $args );
 			
 			if (is_wp_error($resp) || $resp['response']['code'] != 200){				
-				$err_msg = "/wc_search request failed is_retry: " . $is_retry;
+				$err_msg = "/wc_search request failed";
 				self::send_error_report($err_msg);
-				
-				if (!$is_retry){
-					self::pre_get_posts_handler( $wp_query, true);
-				} else {
-					return self::on_fulltext_disable_query($wp_query);
-				}
-								
+				return self::on_fulltext_disable_query($wp_query);				
 			} else {				
 				$response_json = json_decode($resp['body'], true);
 				
@@ -1535,6 +1579,20 @@ class WCISPlugin {
 				// did you mean section
 				$wp_query->query_vars['s'] = $q;
 				self::handle_did_you_mean_result($response_json);
+				
+				if (array_key_exists('facets', $response_json) && count($response_json['facets']) > 0){
+				    if (array_key_exists('facets_completed', $response_json) && $response_json['facets_completed'] == true){
+				        $this->facets_required = true;
+				        $this->facets = $response_json['facets'];
+				        $this->facets_completed = $response_json['facets_completed'];
+				        if (array_key_exists('narrow', $response_json)){
+				            $this->facets_narrow = $response_json['narrow'];
+				        }
+				    } else { 
+				        $err_msg = "Error - facets_completed is false!";
+				        self::send_error_report($err_msg);
+				    }
+				}
 			}
 					
 		} else {
