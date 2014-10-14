@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.7
+Stable tag: 1.2.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,10 +64,11 @@ InstantSearch+ is free up to 50 products.
 5. In case you do not have a search box do one of the following:
 	* Add search box widget - go to WordPress admin page ==> Appearance ==> Widgets and drag InstantSearch+ Search Box widget (or any other search widget) to your preferred location.
 	* Add html code to your theme - Simply add HTML based form to your WordPress theme like this and we’ll pick it from there  
-	  `<form action="/">`  
-		  `<input type="text" name="s" placeholder="Product search">`  
-		  `<input type="hidden" name="post_type" value="product">`  
-	  `</form>`
+	  `<form class="isp_search_box_form" name="isp_search_box" action="/" style="width:10rem; float:none;">`  
+	  		`<input type="text" name="s" class="isp_search_box_input" placeholder="Search..." autocomplete="Off" autocorrect="off" autocapitalize="off" style="outline: none; width:10rem; height:2.3rem;" id="isp_search">`  
+	  		`<input type="hidden" name="post_type" value="product">`  
+	  		`<input type="image" src="/wp-content/plugins/instantsearch-for-woocommerce/widget/assets/images/magnifying_glass.png" class="isp_widget_btn" value="">`  
+	  `</form>`  
 
 Having issues?  contact support@instantsearchplus.com
 
@@ -98,10 +99,11 @@ Go to Wordpress admin => Appearance => Widgets and include the InstantSearch+ Se
 
 = I want to add a searchbox to my theme and make it work with InstantSearch+ - how can I? =
 Simply add HTML based form to your Wordpress theme like this and we’ll pick it from there:
-`<form action="/">
- 	<input type="text" name="s" placeholder="Product search">
- 	<input type="hidden" name="post_type" value="product">
-</form>`
+	  `<form class="isp_search_box_form" name="isp_search_box" action="/" style="width:10rem; float:none;">`  
+	  		`<input type="text" name="s" class="isp_search_box_input" placeholder="Search..." autocomplete="OfF" autocorrect="off" autocapitalize="off" style="outline: none; width:10rem; height:2.3rem;" id="isp_search">`  
+	  		`<input type="hidden" name="post_type" value="product">`  
+	  		`<input type="image" src="/wp-content/plugins/instantsearch-for-woocommerce/widget/assets/images/magnifying_glass.png" class="isp_widget_btn" value="">`  
+	  `</form>`  
 
 == Screenshots ==
 
@@ -114,6 +116,11 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 
 == Changelog ==
+
+= 1.2.8 = 
+* fix - error on strict php mode when doing product update
+* fix - out-of-stock update according to variation's stock quantity
+* new - search by variation's sku
 
 = 1.2.7 = 
 * bug fix - product quantity update after orders
