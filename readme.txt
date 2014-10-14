@@ -65,9 +65,9 @@ InstantSearch+ is free up to 50 products.
 	* Add search box widget - go to WordPress admin page ==> Appearance ==> Widgets and drag InstantSearch+ Search Box widget (or any other search widget) to your preferred location.
 	* Add html code to your theme - Simply add HTML based form to your WordPress theme like this and we’ll pick it from there  
 	  `<form action="/">`  
-		  `<input type="text" name="s" placeholder="Product search">`  
-		  `<input type="hidden" name="post_type" value="product">`  
-	  `</form>`  
+		  `<input type="text" name="s" placeholder="Product search">`    
+		  `<input type="hidden" name="post_type" value="product">`    
+	  `</form>`    
 
 Having issues?  contact support@instantsearchplus.com
 
