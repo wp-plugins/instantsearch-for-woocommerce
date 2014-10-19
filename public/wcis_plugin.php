@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.8';
+	const VERSION = '1.2.9';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -298,7 +298,6 @@ class WCISPlugin {
 		delete_option('wcis_batch_size');
 		delete_option('authentication_key');
 		delete_option('wcis_timeframe');
-		delete_option('wcis_logging');
 		delete_option('max_num_of_batches');
 		delete_option('wcis_total_results');
 		
@@ -548,12 +547,7 @@ class WCISPlugin {
          **/
         try{
 	        if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-	        	try {	     
-	        		if (get_option('wcis_logging')){
-	        			$err_msg = "found woocommerce extension";
-	        			self::send_error_report($err_msg);
-	        		}
-	        		
+	        	try {	     	        		
 		            $product_array = array();
 		            $loop = self::query_products();
 		            $page        = $loop->get( 'paged' );	// batch number
@@ -585,10 +579,6 @@ class WCISPlugin {
 		                		'is_additional_fetch_required' 	=> $is_additional_fetch_required,
 		                );
 
-		                if (get_option('wcis_logging')){
-		                	$err_msg = "sending batch...";
-		                	self::send_error_report($err_msg);
-		                }
 		                self::send_products_batch($send_products);
 		                
 		                // clearing array
@@ -1288,6 +1278,11 @@ class WCISPlugin {
 				self::push_wc_products();
 				status_header(200);
 				exit();		
+			} elseif ($req->query_vars['instantsearchplus'] == 'on_demand_sync'){ 
+			    $err_msg = "on_demand_sync has been executed";
+			    self::send_error_report($err_msg);
+				self::execute_update_request();
+				exit();		
 			} elseif ($req->query_vars['instantsearchplus'] == 'category_sync'){ 
 			    wp_schedule_single_event(time() + self::CRON_SEND_CATEGORIES_TIME_INTERVAL, 'instantsearchplus_send_all_categories');
 			    status_header(200);
@@ -1302,6 +1297,11 @@ class WCISPlugin {
 				self::push_wc_batch($batch_num);
 				status_header(200);
 				exit();
+			}elseif ($req->query_vars['instantsearchplus'] == 'get_product'){			    
+				$identifier = $req->query_vars['instantsearchplus_parameter'];			
+				self::send_product_update($identifier, 'update');
+				status_header(200);
+				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'change_timeframe'){
 				$timeframe = $req->query_vars['instantsearchplus_parameter'];
 				self::update_timeframe($timeframe);
@@ -1312,20 +1312,6 @@ class WCISPlugin {
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'check_admin_message'){
 				self::check_for_alerts();
-				exit();
-			} elseif ($req->query_vars['instantsearchplus'] == 'change_logging_status'){
-				if (!get_option('wcis_logging')) {
-					update_option('wcis_logging', true);
-				} else {
-					delete_option('wcis_logging');
-				}
-				
-				if (get_option('wcis_logging')) {
-					$err_msg = "logging request - logging turned ON!";
-				} else {
-					$err_msg = "logging request - logging turned OFF!";
-				}
-				self::send_error_report($err_msg);
 				exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'disable_highlight'){
 				if (get_option('wcis_enable_highlight') == false){
