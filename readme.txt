@@ -4,16 +4,16 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.8
+Stable tag: 1.2.9
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Boost conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
-Add the fastest, most advanced, cloud-based instant search to your WooCommerce store, and see your conversion rates go up. 
-Search-as-you-type product names, descriptions, images, and prices from the first typed character. 
-Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions  make it a must-have for your eCommerce store.
+Add the fastest, most advanced, **cloud-based** instant search to your WooCommerce store, and see your conversion rates go up. 
+**Search-as-you-type** product names, descriptions, images, and prices from the first typed character. 
+Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.
 
 Play with our demo site at http://woocommerce.instantsearchplus.com  
 
@@ -29,6 +29,12 @@ InstantSearch+ is free up to 50 products.
 * **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
 * Search-as-you-type product names, images, and prices from the **first typed character**
 * In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
+
+= Advanced, Relevant, & Integrated Search Results Page =
+* Contemporary, professionally-looking **search results page**
+* **Did You Mean** auto typo correction
+* Learning search algorithm that continuously gets better
+* **search term highlighting** - visual indication of the end user search term in found results
 
 = Product Instant Search & Promotions =
 * Contextual product promotions based on what visitors type - Promote specific products
@@ -52,9 +58,6 @@ InstantSearch+ is free up to 50 products.
 * Customizable look and feel to fit your store frontend
 * Desktop, tablet and mobile theme supported
 
-= Enhanced Search Results Page =
-* **Did you mean** - provides alternative suggestions for misspelled searches
-* **search term highlighting** - visual indication of the end user search term in found results
 
 == Installation ==
 1. Navigate to the 'Add New' in the plugins dashboard
@@ -116,6 +119,9 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 
 == Changelog ==
+
+= 1.2.9 = 
+* on-demand product update sync (from the dashboard) 
 
 = 1.2.8 = 
 * fix - error on strict php mode when doing product update
