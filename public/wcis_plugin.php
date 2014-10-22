@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.9';
+	const VERSION = '1.2.10';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -730,7 +730,20 @@ class WCISPlugin {
 	    		    }
 	    		}
 	    		$send_product['variations_sku'] = $variations_sku;
-	    		$send_product['attributes'] = $variable->get_variation_attributes();
+	    		
+	    		$all_attributes = $product->get_attributes();
+	    		$attributes = array();
+	    		if (!empty($all_attributes)){
+    	    		foreach ($all_attributes as $attr_mame => $value){
+    	    		    if ($all_attributes[$attr_mame]['is_taxonomy']){
+    	    		        $attributes[$attr_mame] = wc_get_product_terms( $post_id, $attr_mame, array( 'fields' => 'names'));
+    	    		    } else {
+    	    		        $attributes[$attr_mame] = $product->get_attribute($attr_mame);
+    	    		    }
+    	    		}
+	    		}
+
+	    		$send_product['attributes'] = $attributes;
 	    		$send_product['total_variable_stock'] = $variable->get_total_stock();
 	    		
 	    		$send_product['price_min'] = $variable->get_variation_price('min');
