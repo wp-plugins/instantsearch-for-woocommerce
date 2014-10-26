@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.10
+Stable tag: 1.2.11
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -119,6 +119,9 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 
 == Changelog ==
+
+= 1.2.11 = 
+* filter by attributes - WooCommerce 2.0.x compatibility
 
 = 1.2.10 = 
 * filter by attributes - added simple product's attributes
