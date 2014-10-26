@@ -20,13 +20,13 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.10';
+	const VERSION = '1.2.11';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
-	const CRON_EXECUTION_TIME 				 = 900; 		// -> 15 minutes
+	const CRON_EXECUTION_TIME 				 = 900; 	// -> 15 minutes
 	const SINGLES_TO_BATCH_THRESHOLD		 = 10;		// if more then 10 products send as batch
-	const CRON_SEND_CATEGORIES_TIME_INTERVAL = 30;       // -> 30 secunds
+	const CRON_SEND_CATEGORIES_TIME_INTERVAL = 30;      // -> 30 secunds
 	
 	const ELEMENT_TYPE_PRODUCT				 = 0;
 	const ELEMENT_TYPE_CATEGORY				 = 1;
@@ -407,6 +407,10 @@ class WCISPlugin {
         	)		
         );
             
+        if (get_option('wcis_site_id')){
+            $args['body']['site_id'] = get_option('wcis_site_id');
+        }
+            
         $resp = wp_remote_post( $url, $args );
 			
         if (is_wp_error($resp) || $resp['response']['code'] != 200)
@@ -715,37 +719,46 @@ class WCISPlugin {
     			'product_status' => get_post_status($post_id),
     	);
     	
-    	if(!$woocommerce_ver_below_2_1){
-	    	try{
-	    		$send_product['price_compare_at_price'] = $product->get_regular_price();
-	    		$variable = new WC_Product_Variable($post_id);
-	    		
-	    		$variations = $variable->get_available_variations();
-	    		$variations_sku = '';
-	    		if (!empty($variations)){
-	    		    foreach ($variations as $variation){
-	    		        if ($product->get_sku() != $variation['sku']){
-	    		            $variations_sku .= $variation['sku'] . ' ';
-	    		        }
-	    		    }
-	    		}
-	    		$send_product['variations_sku'] = $variations_sku;
-	    		
-	    		$all_attributes = $product->get_attributes();
-	    		$attributes = array();
-	    		if (!empty($all_attributes)){
-    	    		foreach ($all_attributes as $attr_mame => $value){
-    	    		    if ($all_attributes[$attr_mame]['is_taxonomy']){
-    	    		        $attributes[$attr_mame] = wc_get_product_terms( $post_id, $attr_mame, array( 'fields' => 'names'));
-    	    		    } else {
-    	    		        $attributes[$attr_mame] = $product->get_attribute($attr_mame);
-    	    		    }
-    	    		}
-	    		}
+    	try{
+    	    $variable = new WC_Product_Variable($post_id);
+    	     
+    	    $variations = $variable->get_available_variations();
+    	    $variations_sku = '';
+    	    if (!empty($variations)){
+    	        foreach ($variations as $variation){
+    	            if ($product->get_sku() != $variation['sku']){
+    	                $variations_sku .= $variation['sku'] . ' ';
+    	            }
+    	        }
+    	    }
+    	    $send_product['variations_sku'] = $variations_sku;
+    	     
+    	    $all_attributes = $product->get_attributes();
+    	    $attributes = array();
+    	    if (!empty($all_attributes)){
+    	        foreach ($all_attributes as $attr_mame => $value){
+    	            if ($all_attributes[$attr_mame]['is_taxonomy']){
+    	                if (!$woocommerce_ver_below_2_1){
+    	                    $attributes[$attr_mame] = wc_get_product_terms( $post_id, $attr_mame, array( 'fields' => 'names'));
+    	                } else {
+    	                    $attributes[$attr_mame] = woocommerce_get_product_terms( $post_id, $attr_mame, 'names');
+    	                }
+    	            } else {
+    	                $attributes[$attr_mame] = $product->get_attribute($attr_mame);
+    	            }
+    	        }
+    	    }
 
-	    		$send_product['attributes'] = $attributes;
-	    		$send_product['total_variable_stock'] = $variable->get_total_stock();
-	    		
+    	    $send_product['attributes'] = $attributes;
+    	    $send_product['total_variable_stock'] = $variable->get_total_stock();
+    	}catch (Exception $e){
+    	    $err_msg = "exception raised in attributes";
+    	    self::send_error_report($err_msg);
+    	}
+    	
+    	if(!$woocommerce_ver_below_2_1){
+	    	try{	    		
+	    	    $send_product['price_compare_at_price'] = $product->get_regular_price();
 	    		$send_product['price_min'] = $variable->get_variation_price('min');
 	    		$send_product['price_max'] = $variable->get_variation_price('max');
 	    		$send_product['price_min_compare_at_price'] = $variable->get_variation_regular_price('min');
