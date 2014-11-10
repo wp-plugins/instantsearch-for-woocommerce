@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.11
+Stable tag: 1.2.12
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,7 +34,7 @@ InstantSearch+ is free up to 50 products.
 * Contemporary, professionally-looking **search results page**
 * **Did You Mean** auto typo correction
 * Learning search algorithm that continuously gets better
-* **search term highlighting** - visual indication of the end user search term in found results
+* **Search term highlighting** - visual indication of the end user search term in found results
 
 = Product Instant Search & Promotions =
 * Contextual product promotions based on what visitors type - Promote specific products
@@ -57,6 +57,11 @@ InstantSearch+ is free up to 50 products.
 * 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
 * Customizable look and feel to fit your store frontend
 * Desktop, tablet and mobile theme supported
+
+= Automatically Generated Search Filters =
+* Automatically generated, fully customizable **filters**
+* Can include price, vendor, weight, type, tags, or any other product option
+* Help users narrow down search results
 
 
 == Installation ==
@@ -114,11 +119,15 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 2. WordPress compatible dashboard to see insights and customize the widget.
 3. Full text product search with "did-you-mean", typo correction and search terms highlight - full page
 4. Full text product search with "did-you-mean", typo correction and search terms highlight - zoom
+5. Automatically Generated Search Filters
 
 
 
 
 == Changelog ==
+
+= 1.2.12 = 
+* highlight same search query's stem words on search result page
 
 = 1.2.11 = 
 * filter by attributes - WooCommerce 2.0.x compatibility
