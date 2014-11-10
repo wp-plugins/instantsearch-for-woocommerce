@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.11';
+	const VERSION = '1.2.12';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -67,6 +67,7 @@ class WCISPlugin {
 	private $facets_completed = null;
 	private $facets_required = null;
 	private $facets_narrow = null;
+	private $stem_words = null;
 
 	/**
 	 * Initialize the plugin by setting localization and loading public scripts
@@ -1247,6 +1248,9 @@ class WCISPlugin {
 	            
 	            wp_localize_script( $this->plugin_slug . '-fulltext', 'isp_facets_fields', $isp_facets_fields );
 	        }
+	        if (!get_option('just_created_site') && $this->stem_words){
+	            wp_localize_script( $this->plugin_slug . '-fulltext', 'isp_stem_words', $this->stem_words );
+	        }
         }
 	}
 	
@@ -1517,6 +1521,7 @@ class WCISPlugin {
 			$this->facets = null;
 			$this->facets_completed = null;
 			$this->facets_narrow = null;
+			$this->stem_words = null;
 			
 			$page_num = ($query['paged'] == 0) ? 1 : $query['paged'];
 			$post_type = (array_key_exists('post_type', $query)) ? $query['post_type'] : 'post';
@@ -1592,6 +1597,7 @@ class WCISPlugin {
 				$wp_query->query_vars['s'] = $q;
 				self::handle_did_you_mean_result($response_json);
 				
+				// facets section
 				if (array_key_exists('facets', $response_json) && count($response_json['facets']) > 0){
 				    if (array_key_exists('facets_completed', $response_json) && $response_json['facets_completed'] == true){
 				        $this->facets_required = true;
@@ -1604,6 +1610,11 @@ class WCISPlugin {
 				        $err_msg = "Error - facets_completed is false!";
 				        self::send_error_report($err_msg);
 				    }
+				}
+				
+				// stem section
+				if (array_key_exists('stem_words', $response_json) && count($response_json['stem_words']) > 0){
+				    $this->stem_words = $response_json['stem_words'];
 				}
 			}
 					
