@@ -1874,7 +1874,7 @@ class WCISPlugin {
 	}
 	
 	public function add_plugin_admin_head(){
-	    $wc_admin_url = 'http://0-2vk.acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1&v=' . WCISPlugin::VERSION;
+	    $wc_admin_url = 'https://acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1&v=' . WCISPlugin::VERSION;
 	    ?>
 		    <script type="text/javascript">
 	    	    jQuery(document).ready( function($) {
