@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.12';
+	const VERSION = '1.2.13';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -128,6 +128,9 @@ class WCISPlugin {
         // admin message     
         add_action('admin_notices',  array( $this, 'show_admin_message'));
         add_action('admin_init', array( $this, 'admin_init_handler'));
+        // Add the options page and menu item.
+        add_action( 'admin_menu', array( $this, 'add_plugin_admin_menu' ) );
+        add_action( 'admin_head', array( $this, 'add_plugin_admin_head' ) );
         
         // WooCommerce Integration
         add_filter( 'woocommerce_integrations', array( $this, 'add_woocommerce_integrations_handler' ) );
@@ -405,7 +408,8 @@ class WCISPlugin {
         				'is_multisite'		=> $is_multisite_on,
         				'multisite_info'	=> $json_multisite,
         				'version'			=> self::VERSION,
-        	)		
+        	),
+			'timeout' => 20,		
         );
             
         if (get_option('wcis_site_id')){
@@ -666,12 +670,21 @@ class WCISPlugin {
         
         //$post_categories = wp_get_post_categories( $post_id );
         //$categories = get_the_category();
-
-    	$thumbnail = $product->get_image();    	
-    	if ($thumbnail){
-    		preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
-    		$thumbnail = array_pop($result);
-    	}
+    	try{
+        	$thumbnail = $product->get_image();    	
+        	if ($thumbnail){
+        	    if (preg_match('/data-lazy-src="([^\"]+)"/s', $thumbnail, $match)){
+        	        $thumbnail = $match[1];
+        	    }else{
+        	        preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
+        	        $thumbnail = array_pop($result);
+        	    }	
+        	}
+    	} catch (Exception $e){
+    	    $err_msg = "exception raised in thumbnails";
+    	    self::send_error_report($err_msg);
+    	    $thumbnail = '';
+    	} 
     	
     	// handling scheduled sale price update
     	if (!$woocommerce_ver_below_2_1){
@@ -1225,6 +1238,8 @@ class WCISPlugin {
 				if (array_key_exists('original_query', $did_you_mean_fields) && array_key_exists('fixed_query', $did_you_mean_fields)){
 					$args .= 'original_query=' . urlencode($did_you_mean_fields['original_query']) . '&';
 					$args .= 'fixed_query=' . urlencode($did_you_mean_fields['fixed_query']) . '&';
+				} else if (array_key_exists('original_query', $did_you_mean_fields)){
+				    $args .= 'original_query=' . urlencode($did_you_mean_fields['original_query']) . '&';
 				}
 				// clearing did you mean parameters
 				$this->wcis_did_you_mean_fields = null;
@@ -1661,6 +1676,9 @@ class WCISPlugin {
 		    $this->wcis_search_query = $wp_query->query_vars['s'];
 		} else { 
 // 		    if there are alternatives(did you mean) or search query not equals to "result for query" (typo)
+            if (!array_key_exists('original_query', $did_you_mean_fields)){
+                $did_you_mean_fields['original_query'] = $wp_query->query_vars['s'];
+            }
 		    $this->wcis_did_you_mean_fields = $did_you_mean_fields;
 		}
 	}
@@ -1841,6 +1859,31 @@ class WCISPlugin {
 		return $integrations;
 	}
 	
+	
+	/* admin menu */
+	public function add_plugin_admin_menu(){
+	    $this->plugin_screen_hook_suffix = add_menu_page(
+	            __( 'WooCommerce InstantSearch', $this->plugin_slug ),
+	            __( 'InstantSearch+', $this->plugin_slug ),
+	            'manage_options',
+	            $this->plugin_slug,
+	            '',
+	            plugins_url( '/assets/images/instantsearchplus_logo_16x16.png', __FILE__ ),
+	            56.15
+	    );
+	}
+	
+	public function add_plugin_admin_head(){
+	    $wc_admin_url = 'http://0-2vk.acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1&v=' . WCISPlugin::VERSION;
+	    ?>
+		    <script type="text/javascript">
+	    	    jQuery(document).ready( function($) {
+	    	        jQuery('ul li#toplevel_page_WCISPlugin a').attr('target','_blank');
+	    	        jQuery('ul li#toplevel_page_WCISPlugin a').attr("href", "<?php echo($wc_admin_url); ?>")
+	    	    });
+		    </script>
+		<?php
+	}
 
 	function content_filter_shortcode($content){		
 		$pattern = '/\[(.+?)[^\]]*\](.*?)\[\/\\1\]/s';
