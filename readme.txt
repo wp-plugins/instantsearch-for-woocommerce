@@ -17,7 +17,7 @@ Fast cloud-CDN-based results, Product promotions, and personalized real-time sea
 
 Play with our demo site at http://woocommerce.instantsearchplus.com  
 
-Enjoy our 30-day FREE TRIAL and then sign up to one of our affordable monthly subscriptions from $9.99. To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
+Enjoy our 30-day FREE TRIAL and then sign up to one of our affordable monthly subscriptions from $3.99. To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
 InstantSearch+ is free up to 50 products.
 
 
