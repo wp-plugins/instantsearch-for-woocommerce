@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.13
+Stable tag: 1.2.14
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,7 +95,7 @@ Basically our Premium versions contain more advanced customization, support, add
 
 = Do you offer Trials? =
 
-Yes - 7 days free trial
+Yes - 30 days free trial
 
 = Can InstantSearch+ work with my searchbox? =
 
@@ -106,12 +106,21 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 Go to Wordpress admin => Appearance => Widgets and include the InstantSearch+ Search Widget. 
 
 = I want to add a searchbox to my theme and make it work with InstantSearch+ - how can I? =
+
 Simply add HTML based form to your Wordpress theme like this and we’ll pick it from there:
 	  `<form class="isp_search_box_form" name="isp_search_box" action="/" style="width:10rem; float:none;">`  
 	  		`<input type="text" name="s" class="isp_search_box_input" placeholder="Search..." autocomplete="OfF" autocorrect="off" autocapitalize="off" style="outline: none; width:10rem; height:2.3rem;" id="isp_search">`  
 	  		`<input type="hidden" name="post_type" value="product">`  
 	  		`<input type="image" src="/wp-content/plugins/instantsearch-for-woocommerce/widget/assets/images/magnifying_glass.png" class="isp_widget_btn" value="">`  
 	  `</form>`  
+
+= How can I add a search box to my web page using shortcode? =
+
+Add the **shortcode isp_search_box** to your prefered location:
+simply add **[isp_search_box]** or you can add search box with some extra configurations   
+**[isp_search_box width=10 height=2.3 text_size=1 inner_text="Search..."]**   
+* parameters:  width - search box's horizontal measurement | height - search box's vertical measurement | 
+      text_size - text size | inner_text - the text inside the search box
 
 == Screenshots ==
 
@@ -125,6 +134,9 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 
 == Changelog ==
+
+= 1.2.14 = 
+* new search box shortcode [isp_search_box] with optional parameters -> [isp_search_box width=10 height=2.3 text_size=1 inner_text="Search..."]
 
 = 1.2.13 = 
 * timeout increase on install
