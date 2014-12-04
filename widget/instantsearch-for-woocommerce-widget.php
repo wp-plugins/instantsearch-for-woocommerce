@@ -17,11 +17,12 @@ class WCISPluginWidget extends WP_Widget {
 		);
 	}
 	
-	public $default_search_box_fields = array(			
+	public static $default_search_box_fields = array(			
 			'search_box_width'  	=> 10,
 			'search_box_height'		=> 2.3,
 			'search_box_inner_text'	=> 'Search...',
 			'search_box_float'		=> 'none',
+	        'search_box_text_size'  => 1,
 	);
 
 	/**
@@ -41,17 +42,17 @@ class WCISPluginWidget extends WP_Widget {
 		if (array_key_exists('search_box_width', $instance) && is_numeric($instance['search_box_width']) && $instance['search_box_width'] != 0)
 			$search_box_width = $instance['search_box_width'];
 		else
-			$search_box_width = $this->default_search_box_fields['search_box_width'];
+			$search_box_width = self::$default_search_box_fields['search_box_width'];
 		if (array_key_exists('search_box_height', $instance) && is_numeric($instance['search_box_height']) && $instance['search_box_height'] != 0)
 			$search_box_height = $instance['search_box_height'];
 		else
-			$search_box_height = $this->default_search_box_fields['search_box_height'];
+			$search_box_height = self::$default_search_box_fields['search_box_height'];
 		$search_box_inner_text = (array_key_exists('search_box_inner_text', $instance)) ? 
 							$instance['search_box_inner_text'] : 
-							$this->default_search_box_fields['search_box_inner_text'];
+							self::$default_search_box_fields['search_box_inner_text'];
 		$search_box_float = (array_key_exists('search_box_float', $instance)) ?
 							$instance['search_box_float'] :
-							$this->default_search_box_fields['search_box_float'];
+							self::$default_search_box_fields['search_box_float'];
 				
 		$form = '
             	<form class="isp_search_box_form" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$search_box_width.'rem; float:'.$search_box_float.';">
@@ -74,16 +75,16 @@ class WCISPluginWidget extends WP_Widget {
 	public function form( $instance ) {		
 		$search_box_width = (array_key_exists('search_box_width', $instance)) ? 
 							$instance['search_box_width'] : 
-							$this->default_search_box_fields['search_box_width'];
+							self::$default_search_box_fields['search_box_width'];
 		$search_box_height = (array_key_exists('search_box_height', $instance)) ?
 							$instance['search_box_height'] :
-							$this->default_search_box_fields['search_box_height'];
+							self::$default_search_box_fields['search_box_height'];
 		$search_box_inner_text = (array_key_exists('search_box_inner_text', $instance)) ? 
 							$instance['search_box_inner_text'] : 
-							$this->default_search_box_fields['search_box_inner_text'];
+							self::$default_search_box_fields['search_box_inner_text'];
 		$search_box_float = (array_key_exists('search_box_float', $instance)) ?
 							$instance['search_box_float'] :
-							$this->default_search_box_fields['search_box_float'];
+							self::$default_search_box_fields['search_box_float'];
 
 		$float_selecte = '';
 		$options = array('none', 'left', 'right');
@@ -135,9 +136,6 @@ class WCISPluginWidget extends WP_Widget {
 			$instance['search_box_width'] = sanitize_text_field($new_instance['search_box_width']);
 		if (is_numeric(sanitize_text_field($new_instance['search_box_height'])) && sanitize_text_field($new_instance['search_box_height'] != 0))
 			$instance['search_box_height'] = sanitize_text_field($new_instance['search_box_height']);
-		
-		$err_msg = "site: " . get_option('siteurl') . " - widget is active!";
-		WCISPlugin::get_instance()->send_error_report($err_msg);
 		
 		return $instance;
 	}

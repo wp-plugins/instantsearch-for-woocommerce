@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.13';
+	const VERSION = '1.2.14';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -154,7 +154,7 @@ class WCISPlugin {
 	}
 	
 	public static function wcis_add_action_links( $links ) {				
-		$url = 'http://woo.instantsearchplus.com/wc_dashboard';
+		$url = 'https://woo.instantsearchplus.com/wc_dashboard';
 		$params = '?site_id=' . get_option( 'wcis_site_id' );
 		$params .= '&authentication_key=' . get_option('authentication_key');
 		$params .= '&new_tab=1';
@@ -337,9 +337,6 @@ class WCISPlugin {
 		if ( 1 !== did_action( 'wpmu_new_blog' ) ) {
 			return;
 		}
-		
-		$err_msg = "activate_new_site triggered";
-		self::send_error_report($err_msg);
 
 		switch_to_blog( $blog_id );
 		self::single_activate();
@@ -1028,7 +1025,8 @@ class WCISPlugin {
     					'total_products' 				=> $total_products,
     					'batch_number' 					=> $batch_number, 
     					'is_additional_fetch_required' 	=> $is_additional_fetch_required,
-    			)
+    			),
+    	        'timeout' => 10,
     	);
     	
     	$resp = wp_remote_post( $url, $args );
@@ -1071,8 +1069,6 @@ class WCISPlugin {
                 foreach($product_category_ids as $category_id){
                     $category = self::get_category_by_id($category_id);
                     if ($category == null){
-                        $err_msg = "ERROR!!! in  send_categories_as_batch() - category == null";
-                        self::send_error_report($err_msg);
                         continue;
                     }
                     $category['action'] = 'edit';
@@ -1088,6 +1084,7 @@ class WCISPlugin {
                                     'site_id' => get_option( 'wcis_site_id' ),
                                     'categories' => json_encode($category_array),
                                     'authentication_key' => get_option('authentication_key')),
+                    'timeout' => 10,
             );
             $resp = wp_remote_post( $url, $args );
             
@@ -1131,6 +1128,7 @@ class WCISPlugin {
              				  'site_id' => get_option( 'wcis_site_id' ), 
              		 		  'product_update' => $json_product_update, 
         			   		  'authentication_key' => get_option('authentication_key')),
+            'timeout' => 10,
         );
         
         $resp = wp_remote_post( $url, $args );     
@@ -1158,7 +1156,8 @@ class WCISPlugin {
 								'site_id' => get_option( 'wcis_site_id'),
 								'authentication_key' => get_option('authentication_key'),
 								'email' => get_option( 'admin_email'),
-								'site_status' => 'deactivate' )
+								'site_status' => 'deactivate' ),
+		        'timeout' => 10,
 		);
 		
 		$resp = wp_remote_post( $url, $args );
@@ -1194,7 +1193,7 @@ class WCISPlugin {
 	public function enqueue_scripts() {
 // 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
         global $product;
-        $script_url = 'https://acp-magento.appspot.com/js/acp-magento.js';
+        $script_url = 'https://woo.instantsearchplus.com/js/acp-magento.js';
         $args = "mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
@@ -1213,7 +1212,7 @@ class WCISPlugin {
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
 
         if (is_search() && get_option('fulltext_disabled') == false){
-        	$script_url = 'https://acp-magento.appspot.com/js/wcis-results.js';
+        	$script_url = 'https://woo.instantsearchplus.com/js/wcis-results.js';
 	        $args = $is_admin_bar_showing;
 	        
 	        if (get_option('just_created_site')){
@@ -1476,6 +1475,7 @@ class WCISPlugin {
 						'site_id' => get_option( 'wcis_site_id' ),
 						'authentication_key' => get_option('authentication_key'),
 						'err_desc' => $str),
+		        'timeout' => 15,
 		);
 		
 		$resp = wp_remote_post( $url, $args );
@@ -1558,7 +1558,7 @@ class WCISPlugin {
 					                'post_type'             => $post_type,
 					                'facets_required'       => 1
 					),
-					'timeout' => 20,
+					'timeout' => 15,
 			);
 			
 			$narrow = null;
@@ -1621,9 +1621,6 @@ class WCISPlugin {
 				        if (array_key_exists('narrow', $response_json)){
 				            $this->facets_narrow = $response_json['narrow'];
 				        }
-				    } else { 
-				        $err_msg = "Error - facets_completed is false!";
-				        self::send_error_report($err_msg);
 				    }
 				}
 				
@@ -1777,7 +1774,7 @@ class WCISPlugin {
 	// admin quota exceeded message
 	function show_admin_message(){			
 		if (is_admin()){
-			$dashboard_url = 'http://woo.instantsearchplus.com/wc_dashboard';
+			$dashboard_url = 'https://woo.instantsearchplus.com/wc_dashboard';
 			$dashboard_url .= '?site_id=' . get_option( 'wcis_site_id' );
 			$dashboard_url .= '&authentication_key=' . get_option('authentication_key');
 			$dashboard_url .= '&new_tab=1';
@@ -1785,11 +1782,11 @@ class WCISPlugin {
 			
 			if (get_option('wcis_just_created_alert')){
 				$just_created_text = '';
-				
+								
 				echo '<div class="updated"><p>';
-				printf( __( '<b>InstantSearch+ for WooCommerce is installed.</b> Please <b><u><a href="%1$s" target="_blank">Select your service plan</a></u></b> to get started <a href="%2$s" style="float:right"><u>Hide</u></a>', 'WCISPlugin' ), 
-							$dashboard_url, 
-							add_query_arg('instantsearchplus', 'remove_just_created_alert'));
+				printf( __( '<b>InstantSearch+ for WooCommerce is installed :-)  </b><u><a href="%1$s" target="_blank"> Choose your settings </a></u> <a href="%2$s" style="float:right"><u>Hide</u></a>', 'WCISPlugin' ),
+				$dashboard_url,
+				add_query_arg('instantsearchplus', 'remove_just_created_alert'));
 				echo "</p></div>";
 				
 			}
@@ -1874,7 +1871,7 @@ class WCISPlugin {
 	}
 	
 	public function add_plugin_admin_head(){
-	    $wc_admin_url = 'http://0-2vk.acp-magento.appspot.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1&v=' . WCISPlugin::VERSION;
+	    $wc_admin_url = 'https://woo.instantsearchplus.com/wc_dashboard?site_id='. get_option( 'wcis_site_id' ) . '&authentication_key=' . get_option('authentication_key') . '&new_tab=1&v=' . WCISPlugin::VERSION;
 	    ?>
 		    <script type="text/javascript">
 	    	    jQuery(document).ready( function($) {
@@ -1932,5 +1929,35 @@ class WCISPlugin {
 	    }
 	    update_option('cron_update_product_list_by_date', $product_list_by_date);
 	}
+	
+
+	function get_isp_search_box_form( $attr ) {   
+        $attr = shortcode_atts(
+                array(
+                        'inner_text'  => WCISPluginWidget::$default_search_box_fields['search_box_inner_text'],
+                        'height'	  => WCISPluginWidget::$default_search_box_fields['search_box_height'],
+                        'width'  	  => WCISPluginWidget::$default_search_box_fields['search_box_width'],
+                        'text_size'   => WCISPluginWidget::$default_search_box_fields['search_box_text_size']
+                ), $attr, 'isp_search_box' );
+        
+        if (!is_numeric($attr['width']) || $attr['width'] <= 0){
+            $attr['width'] = WCISPluginWidget::$default_search_box_fields['search_box_width'];
+        }
+        if (!is_numeric($attr['height']) || $attr['height'] <= 0){
+            $attr['height'] = WCISPluginWidget::$default_search_box_fields['search_box_height'];
+        }
+        if (!is_numeric($attr['text_size']) || $attr['text_size'] <= 0){
+            $attr['text_size'] = WCISPluginWidget::$default_search_box_fields['search_box_text_size'];
+        }
+
+	    $form = '<form class="isp_search_box_form" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$attr['width'].'rem; float:none;">
+                    <input type="text" name="s" class="isp_search_box_input" placeholder="'.$attr['inner_text'].'" style="outline: none; width:'.$attr['width'].'rem; height:'.$attr['height'].'rem; font-size:'.$attr['text_size'].'em;">
+                    <input type="hidden" name="post_type" value="product">
+                    <input type="image" src="' . plugins_url('widget/assets/images/magnifying_glass.png', dirname(__FILE__) ) . '" class="isp_widget_btn" value="">
+                </form';
+
+	    return $form;
+	}
+	
 }
 ?>
