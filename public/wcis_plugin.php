@@ -1193,7 +1193,7 @@ class WCISPlugin {
 	public function enqueue_scripts() {
 // 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
         global $product;
-        $script_url = 'https://woo.instantsearchplus.com/js/acp-magento.js';
+        $script_url = 'https://acp-magento.appspot.com/js/acp-magento.js';
         $args = "mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
@@ -1212,7 +1212,7 @@ class WCISPlugin {
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
 
         if (is_search() && get_option('fulltext_disabled') == false){
-        	$script_url = 'https://woo.instantsearchplus.com/js/wcis-results.js';
+        	$script_url = 'https://acp-magento.appspot.com/js/wcis-results.js';
 	        $args = $is_admin_bar_showing;
 	        
 	        if (get_option('just_created_site')){
