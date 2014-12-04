@@ -55,7 +55,7 @@ class WCISPluginWidget extends WP_Widget {
 							self::$default_search_box_fields['search_box_float'];
 				
 		$form = '
-            	<form class="isp_search_box_form" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$search_box_width.'rem; float:'.$search_box_float.';">
+            	<form class="isp_search_box_form" isp_src="widget" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$search_box_width.'rem; float:'.$search_box_float.';">
               		<input type="text" name="s" class="isp_search_box_input" placeholder="'.$search_box_inner_text.'" autocomplete="off" autocorrect="off" autocapitalize="off" style="outline: none; width:'.$search_box_width.'rem; height:'.$search_box_height.'rem;">
 					<input type="hidden" name="post_type" value="product" />
               		<input type="image" src="'. plugins_url('assets/images/magnifying_glass.png', __FILE__ ) .'" class="isp_widget_btn" value="" />

@@ -1950,7 +1950,7 @@ class WCISPlugin {
             $attr['text_size'] = WCISPluginWidget::$default_search_box_fields['search_box_text_size'];
         }
 
-	    $form = '<form class="isp_search_box_form" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$attr['width'].'rem; float:none;">
+	    $form = '<form class="isp_search_box_form" isp_src="shortcode" name="isp_search_box" action="' . esc_url(home_url('/')) . '" style="width:'.$attr['width'].'rem; float:none;">
                     <input type="text" name="s" class="isp_search_box_input" placeholder="'.$attr['inner_text'].'" style="outline: none; width:'.$attr['width'].'rem; height:'.$attr['height'].'rem; font-size:'.$attr['text_size'].'em;">
                     <input type="hidden" name="post_type" value="product">
                     <input type="image" src="' . plugins_url('widget/assets/images/magnifying_glass.png', dirname(__FILE__) ) . '" class="isp_widget_btn" value="">
