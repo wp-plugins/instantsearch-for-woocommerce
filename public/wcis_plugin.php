@@ -1785,8 +1785,8 @@ class WCISPlugin {
 								
 				echo '<div class="updated"><p>';
 				printf( __( '<b>InstantSearch+ for WooCommerce is installed :-)  </b><u><a href="%1$s" target="_blank"> Choose your settings </a></u> <a href="%2$s" style="float:right"><u>Hide</u></a>', 'WCISPlugin' ),
-				$dashboard_url,
-				add_query_arg('instantsearchplus', 'remove_just_created_alert'));
+        				$dashboard_url,
+        				add_query_arg('instantsearchplus', 'remove_just_created_alert'));
 				echo "</p></div>";
 				
 			}
