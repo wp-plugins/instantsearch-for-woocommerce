@@ -4,7 +4,7 @@ Donate link:
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
 Requires at least: 3.3
 Tested up to: 4.0
-Stable tag: 1.2.14
+Stable tag: 1.2.15
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -134,6 +134,10 @@ simply add **[isp_search_box]** or you can add search box with some extra config
 
 
 == Changelog ==
+
+= 1.2.15 = 
+* analytics improvement
+* new configuration option - change number of products per page through InstantSearch+ dashboard
 
 = 1.2.14 = 
 * new search box shortcode [isp_search_box] with optional parameters -> [isp_search_box width=10 height=2.3 text_size=1 inner_text="Search..."]

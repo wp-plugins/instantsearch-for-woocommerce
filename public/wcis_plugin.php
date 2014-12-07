@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.14';
+	const VERSION = '1.2.15';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -62,6 +62,7 @@ class WCISPlugin {
 	private $wcis_total_results = 0;
 	private $wcis_did_you_mean_fields = null;
 	private $wcis_search_query = null;
+	private $products_per_page = null;
 	
 	private $facets = null;
 	private $facets_completed = null;
@@ -1193,7 +1194,7 @@ class WCISPlugin {
 	public function enqueue_scripts() {
 // 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
         global $product;
-        $script_url = 'https://woo.instantsearchplus.com/js/acp-magento.js';
+        $script_url = 'https://acp-magento.appspot.com/js/acp-magento.js';
         $args = "mode=woocommerce&";
         $args = $args . "UUID=" . get_option('wcis_site_id') ."&";
         $args = $args . "store=" . get_current_blog_id() ."&";
@@ -1204,15 +1205,21 @@ class WCISPlugin {
         }
         $args .= $is_admin_bar_showing;
         
-        $args .= "products_per_page=" . (string)get_option('posts_per_page') . "&";
+        if ($this->products_per_page){
+            $products_per_page = $this->products_per_page; 
+	    } else {
+	        $products_per_page = get_option('posts_per_page');
+        }
+        $args .= "products_per_page=" . (string)$products_per_page . "&";
         if ($product){
             $args .= 'product_url=' . get_permalink() .'&';
+            $args .= 'product_id=' . get_the_ID() .'&';
             $args .= $product;
         }
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
 
         if (is_search() && get_option('fulltext_disabled') == false){
-        	$script_url = 'https://woo.instantsearchplus.com/js/wcis-results.js';
+        	$script_url = 'https://acp-magento.appspot.com/js/wcis-results.js';
 	        $args = $is_admin_bar_showing;
 	        
 	        if (get_option('just_created_site')){
@@ -1541,9 +1548,6 @@ class WCISPlugin {
 			$page_num = ($query['paged'] == 0) ? 1 : $query['paged'];
 			$post_type = (array_key_exists('post_type', $query)) ? $query['post_type'] : 'post';
 			
-			// TODO: if posts_per_page < 1 set it to 10
-			$results_per_page = get_option('posts_per_page');
-			
 			$url = self::SERVER_URL . 'wc_search';
 			$args = array(
 					'body' => array('s' 					=> get_option('siteurl'),
@@ -1553,7 +1557,6 @@ class WCISPlugin {
 									'v' 					=> self::VERSION,
 									'store_id' 				=> get_current_blog_id(),
 									'p' 					=> $page_num,				// requested page number
-									'products_per_page'		=> $results_per_page,
 									'is_admin_view'			=> is_admin_bar_showing(),
 					                'post_type'             => $post_type,
 					                'facets_required'       => 1
@@ -1606,6 +1609,12 @@ class WCISPlugin {
 				    $this->wcis_total_results = $response_json['total_results'];
 				} else {
 				    $this->wcis_total_results = -1;
+				}
+				
+				if (array_key_exists('products_per_page', $response_json) && $response_json['products_per_page'] != 0){
+				    $this->products_per_page = $response_json['products_per_page'];
+				} else {
+				    $this->products_per_page = get_option('posts_per_page');
 				}
 				
 				// did you mean section
@@ -1703,7 +1712,7 @@ class WCISPlugin {
 	
 	function post_limits_handler($limit){
 		if( is_search() && (get_option('fulltext_disabled') == false)){			
-			$limit = 'LIMIT 0, ' . get_option('posts_per_page');
+			$limit = 'LIMIT 0, ' . $this->products_per_page;
 		}
 		return $limit;
 	}
@@ -1718,9 +1727,9 @@ class WCISPlugin {
 			}
 			
 			$wp_query->found_posts = $total_results;			
-			$wp_query->max_num_pages = ceil($total_results / get_option('posts_per_page'));
+			$wp_query->max_num_pages = ceil($total_results / $this->products_per_page);
 // 			$wp_query->query_vars['post_type'] = 'product';
-			$wp_query->query_vars['posts_per_page'] = get_option('posts_per_page');
+			$wp_query->query_vars['posts_per_page'] = $this->products_per_page;
 			
 			unset($posts);
 			$posts = array();
@@ -1782,7 +1791,7 @@ class WCISPlugin {
 			
 			if (get_option('wcis_just_created_alert')){
 				$just_created_text = '';
-								
+				
 				echo '<div class="updated"><p>';
 				printf( __( '<b>InstantSearch+ for WooCommerce is installed :-)  </b><u><a href="%1$s" target="_blank"> Choose your settings </a></u> <a href="%2$s" style="float:right"><u>Hide</u></a>', 'WCISPlugin' ),
         				$dashboard_url,
