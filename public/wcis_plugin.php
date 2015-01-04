@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.15';
+	const VERSION = '1.2.16';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -673,7 +673,9 @@ class WCISPlugin {
         	if ($thumbnail){
         	    if (preg_match('/data-lazy-src="([^\"]+)"/s', $thumbnail, $match)){
         	        $thumbnail = $match[1];
-        	    }else{
+        	    } else if (preg_match('/data-lazy-original="([^\"]+)"/s', $thumbnail, $match)){
+        	        $thumbnail = $match[1];
+        	    } else {
         	        preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
         	        $thumbnail = array_pop($result);
         	    }	
@@ -1257,6 +1259,11 @@ class WCISPlugin {
 	        if (!get_option('just_created_site') && $this->facets_required == true){
 	            $args .= 'facets_required=1&';
 	        }
+	        if (!get_option('just_created_site') && $this->facets_completed == true){
+	            $args .= 'facets_completed=1&';
+	        } else if (!get_option('just_created_site') && !$this->facets_completed){
+	            $args .= 'facets_completed=0&';
+	        }
 
 	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
 	        
@@ -1335,7 +1342,7 @@ class WCISPlugin {
 				self::execute_update_request();
 				exit();		
 			} elseif ($req->query_vars['instantsearchplus'] == 'category_sync'){ 
-			    wp_schedule_single_event(time() + self::CRON_SEND_CATEGORIES_TIME_INTERVAL, 'instantsearchplus_send_all_categories');
+			    self::send_categories_as_batch();
 			    status_header(200);
 			    exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
@@ -1353,6 +1360,11 @@ class WCISPlugin {
 				self::send_product_update($identifier, 'update');
 				status_header(200);
 				exit();
+			}elseif ($req->query_vars['instantsearchplus'] == 'update_batch_size'){
+			    $new_size = $req->query_vars['instantsearchplus_parameter'];
+			    update_option('wcis_batch_size', $new_size);
+			    status_header(200);
+			    exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'change_timeframe'){
 				$timeframe = $req->query_vars['instantsearchplus_parameter'];
 				self::update_timeframe($timeframe);
@@ -1623,13 +1635,13 @@ class WCISPlugin {
 				
 				// facets section
 				if (array_key_exists('facets', $response_json) && count($response_json['facets']) > 0){
-				    if (array_key_exists('facets_completed', $response_json) && $response_json['facets_completed'] == true){
-				        $this->facets_required = true;
-				        $this->facets = $response_json['facets'];
+				    $this->facets_required = true;
+				    $this->facets = $response_json['facets'];
+				    if (array_key_exists('facets_completed', $response_json)){
 				        $this->facets_completed = $response_json['facets_completed'];
-				        if (array_key_exists('narrow', $response_json)){
-				            $this->facets_narrow = $response_json['narrow'];
-				        }
+				    }
+				    if (array_key_exists('narrow', $response_json)){
+				        $this->facets_narrow = $response_json['narrow'];
 				    }
 				}
 				
@@ -1963,7 +1975,7 @@ class WCISPlugin {
                     <input type="text" name="s" class="isp_search_box_input" placeholder="'.$attr['inner_text'].'" style="outline: none; width:'.$attr['width'].'rem; height:'.$attr['height'].'rem; font-size:'.$attr['text_size'].'em;">
                     <input type="hidden" name="post_type" value="product">
                     <input type="image" src="' . plugins_url('widget/assets/images/magnifying_glass.png', dirname(__FILE__) ) . '" class="isp_widget_btn" value="">
-                </form';
+                </form>';
 
 	    return $form;
 	}

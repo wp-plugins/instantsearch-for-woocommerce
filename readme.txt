@@ -1,10 +1,10 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
 Donate link:
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search
 Requires at least: 3.3
-Tested up to: 4.0
-Stable tag: 1.2.15
+Tested up to: 4.1
+Stable tag: 1.2.16
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -105,6 +105,14 @@ Yes - InstantSearch+ can work with any html inputbox on your page. Be that a Wor
 
 Go to Wordpress admin => Appearance => Widgets and include the InstantSearch+ Search Widget. 
 
+= How can I add a search box to my web page using shortcode? =
+
+Add the **shortcode isp_search_box** to your prefered location:
+simply add **[isp_search_box]** or you can add search box with some extra configurations   
+**[isp_search_box width=10 height=2.3 text_size=1 inner_text="Search..."]**   
+* parameters:  width - search box's horizontal measurement | height - search box's vertical measurement | 
+      text_size - text size | inner_text - the text inside the search box
+
 = I want to add a searchbox to my theme and make it work with InstantSearch+ - how can I? =
 
 Simply add HTML based form to your Wordpress theme like this and we’ll pick it from there:
@@ -114,13 +122,6 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 	  		`<input type="image" src="/wp-content/plugins/instantsearch-for-woocommerce/widget/assets/images/magnifying_glass.png" class="isp_widget_btn" value="">`  
 	  `</form>`  
 
-= How can I add a search box to my web page using shortcode? =
-
-Add the **shortcode isp_search_box** to your prefered location:
-simply add **[isp_search_box]** or you can add search box with some extra configurations   
-**[isp_search_box width=10 height=2.3 text_size=1 inner_text="Search..."]**   
-* parameters:  width - search box's horizontal measurement | height - search box's vertical measurement | 
-      text_size - text size | inner_text - the text inside the search box
 
 == Screenshots ==
 
@@ -134,6 +135,11 @@ simply add **[isp_search_box]** or you can add search box with some extra config
 
 
 == Changelog ==
+
+= 1.2.16 = 
+* InstantSearch+ search box widget warning fix. 
+* compatible with WP-Rocket LazyLoad
+* InstantSearch+ search box shortcode html error fix
 
 = 1.2.15 = 
 * analytics improvement

@@ -32,7 +32,7 @@ class WCISPluginWidget extends WP_Widget {
 	 * @param array $instance
 	 */
 	public function widget( $args, $instance ) {
-		$title = apply_filters( 'widget_title', $instance['title'] );
+	    $title = isset( $instance['title'] ) ? apply_filters( 'widget_title', $instance['title'] ) : '';
 		
 		echo $args['before_widget'];
 		if ( !empty($title) ) {
