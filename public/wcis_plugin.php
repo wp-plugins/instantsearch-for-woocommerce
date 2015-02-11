@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.16';
+	const VERSION = '1.2.17';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -63,6 +63,9 @@ class WCISPlugin {
 	private $wcis_did_you_mean_fields = null;
 	private $wcis_search_query = null;
 	private $products_per_page = null;
+	
+	private $fulltext_disabled = null;
+	private $just_created_site = false;
 	
 	private $facets = null;
 	private $facets_completed = null;
@@ -306,10 +309,9 @@ class WCISPlugin {
 		delete_option('max_num_of_batches');
 		delete_option('wcis_total_results');
 		
+		// compatibility 
 		delete_option('fulltext_disabled');
 		delete_option('just_created_site');
-		
-		// compatibility 
 		delete_option('wcis_fulltext_ids');
 		delete_option('wcis_did_you_mean_enabled');
 		delete_option('wcis_did_you_mean_fields');
@@ -1220,11 +1222,11 @@ class WCISPlugin {
         }
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
 
-        if (is_search() && get_option('fulltext_disabled') == false){
+        if (is_search() && !$this->fulltext_disabled){
         	$script_url = 'https://acp-magento.appspot.com/js/wcis-results.js';
 	        $args = $is_admin_bar_showing;
 	        
-	        if (get_option('just_created_site')){
+            if ($this->just_created_site){
 	        	$args .= 'just_created_site=true&';
 	        }else if ($this->wcis_did_you_mean_fields != null && !empty($this->wcis_did_you_mean_fields)){
 	        	// did you mean injection
@@ -1256,18 +1258,18 @@ class WCISPlugin {
 	        	$this->wcis_search_query = null;
 	        }
 	        
-	        if (!get_option('just_created_site') && $this->facets_required == true){
+	        if (!$this->just_created_site && $this->facets_required == true){
 	            $args .= 'facets_required=1&';
 	        }
-	        if (!get_option('just_created_site') && $this->facets_completed == true){
+	        if (!$this->just_created_site && $this->facets_completed == true){
 	            $args .= 'facets_completed=1&';
-	        } else if (!get_option('just_created_site') && !$this->facets_completed){
+	        } else if (!$this->just_created_site && !$this->facets_completed){
 	            $args .= 'facets_completed=0&';
 	        }
 
 	        wp_enqueue_script( $this->plugin_slug . '-fulltext', $script_url . '?' . $args, array('jquery'), self::VERSION );
 	        
-	        if (!get_option('just_created_site') && $this->facets_required == true){
+	        if (!$this->just_created_site && $this->facets_required == true){
 	            $isp_facets_fields = array(); //$this->facets_narrow
 	            $isp_facets_fields['facets'] = $this->facets;
 	            if ($this->facets_narrow){
@@ -1276,7 +1278,7 @@ class WCISPlugin {
 	            
 	            wp_localize_script( $this->plugin_slug . '-fulltext', 'isp_facets_fields', $isp_facets_fields );
 	        }
-	        if (!get_option('just_created_site') && $this->stem_words){
+	        if (!$this->just_created_site && $this->stem_words){
 	            wp_localize_script( $this->plugin_slug . '-fulltext', 'isp_stem_words', $this->stem_words );
 	        }
         }
@@ -1597,14 +1599,14 @@ class WCISPlugin {
 				if (array_key_exists('fulltext_disabled', $response_json)){
 					return self::on_fulltext_disable_query($wp_query);
 				} elseif (array_key_exists('just_created_site', $response_json)){
-					update_option('just_created_site', true);
-					delete_option('fulltext_disabled');
+				    $this->just_created_site = true;
+					$this->fulltext_disabled = false;
 					return $wp_query;
 				}
 				
-				if (get_option('just_created_site')){
-					delete_option('just_created_site');
-				}
+                if ($this->just_created_site){
+                    $this->just_created_site = false;
+                } 
 
 				$product_ids = array();
 
@@ -1659,13 +1661,15 @@ class WCISPlugin {
 			}
 		}
 		// full text search enable
-		delete_option('fulltext_disabled');
+		$this->fulltext_disabled = false;
 		return $wp_query;
 	}
 	
 	public function on_fulltext_disable_query($wp_query){
-		delete_option('just_created_site');
-		update_option('fulltext_disabled', true);
+	    if ($this->just_created_site){
+	        $this->just_created_site = false;
+	    }
+		$this->fulltext_disabled = true;
 		return $wp_query;
 	}
 	
@@ -1716,21 +1720,21 @@ class WCISPlugin {
 	
 	
 	public function posts_search_handler($search){
-		if( is_search() && !is_admin() && (get_option('fulltext_disabled') == false)){			
+	    if( is_search() && !is_admin() && !$this->fulltext_disabled){
 		    $search = ''; // disable WordPress search
 		}
 		return $search;	
 	}
 	
 	function post_limits_handler($limit){
-		if( is_search() && (get_option('fulltext_disabled') == false)){			
+	    if( is_search() && !$this->fulltext_disabled){
 			$limit = 'LIMIT 0, ' . $this->products_per_page;
 		}
 		return $limit;
 	}
 	
 	function the_posts_handler($posts){
-		if (is_search() && (get_option('fulltext_disabled') == false)){
+	    if (is_search() && !$this->fulltext_disabled){
 			global $wp_query;
 			
 			$total_results = $this->wcis_total_results;	
@@ -1761,7 +1765,7 @@ class WCISPlugin {
 	
 	// highlighting title/content/tags/excerpt according to the search terms
 	function highlight_result_handler($current_text){
-		if (is_search() && in_the_loop() && get_option('wcis_enable_highlight') && (get_option('fulltext_disabled') == false)){
+	    if (is_search() && in_the_loop() && get_option('wcis_enable_highlight') && !$this->fulltext_disabled){
 			global $wp_query;
 			$query = $wp_query->query_vars;
 			
