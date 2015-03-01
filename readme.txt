@@ -24,44 +24,43 @@ To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-a
 [youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
 
 
-= Features =
-* **Lightning-Fast Instant Search for WooCommerce Stores**
- * **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
- * Search-as-you-type product names, images, and prices from the **first typed character**
- * In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
+= Lightning-Fast Instant Search for WooCommerce Stores =
+* **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
+* Search-as-you-type product names, images, and prices from the **first typed character**
+* In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
 
-* **Advanced, Relevant, & Integrated Search Results Page**
- * Contemporary, professionally-looking **search results page**
- * **Did You Mean** auto typo correction
- * Learning search algorithm that continuously gets better
- * **Search term highlighting** - visual indication of the end user search term in found results
+= Advanced, Relevant, & Integrated Search Results Page =
+* Contemporary, professionally-looking **search results page**
+* **Did You Mean** auto typo correction
+* Learning search algorithm that continuously gets better
+* **Search term highlighting** - visual indication of the end user search term in found results
 
-* **Product Instant Search & Promotions**
- * Contextual product promotions based on what visitors type - Promote specific products
- * Product suggestions based on your WooCommerce store catalog
- * Turbolinks that link destinations to non-product searches & synonyms
+= Product Instant Search & Promotions =
+* Contextual product promotions based on what visitors type - Promote specific products
+* Product suggestions based on your WooCommerce store catalog
+* Turbolinks that link destinations to non-product searches & synonyms
 
-* **Personal Real Time Search Suggestions**
- * Popular Searches based on what other people type
- * Personal history Searches based on what the visitor previously searched
- * Advanced word matching and typo correction. Your visitor will get suggestions even when they misspell
+= Personal Real Time Search Suggestions =
+* Popular Searches based on what other people type
+* Personal history Searches based on what the visitor previously searched
+* Advanced word matching and typo correction. Your visitor will get suggestions even when they misspell
 
-* **Online InstantSearch Portal and Search Terms Report**
- * Usage dashboard and email reports
- * Top search suggestions - what people searched for on your WooCommerce store
- * Top products - which product suggestions were chosen
- * Top under-served searches - what people look for but cannot find
+= Online InstantSearch Portal and Search Terms Report =
+* Usage dashboard and email reports
+* Top search suggestions - what people searched for on your WooCommerce store
+* Top products - which product suggestions were chosen
+* Top under-served searches - what people look for but cannot find
 
-* **Seamless Integration with Your WooCommerce Store**
- * 2-minute installation
- * 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
- * Customizable look and feel to fit your store frontend
- * Desktop, tablet and mobile theme supported
+= Seamless Integration with Your WooCommerce Store =
+* 2-minute installation
+* 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
+* Customizable look and feel to fit your store frontend
+* Desktop, tablet and mobile theme supported
 
-* **Automatically Generated Search Filters**
- * Automatically generated, fully customizable **filters**
- * Can include price, vendor, weight, type, tags, or any other product option
- * Help users narrow down search results
+= Automatically Generated Search Filters =
+* Automatically generated, fully customizable **filters**
+* Can include price, vendor, weight, type, tags, or any other product option
+* Help users narrow down search results
 
 
 == Installation ==
