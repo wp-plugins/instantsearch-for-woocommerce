@@ -20,7 +20,7 @@ class WCISPlugin {
 //     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.17';
+	const VERSION = '1.2.18';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -1217,8 +1217,7 @@ class WCISPlugin {
         $args .= "products_per_page=" . (string)$products_per_page . "&";
         if ($product){
             $args .= 'product_url=' . get_permalink() .'&';
-            $args .= 'product_id=' . get_the_ID() .'&';
-            $args .= $product;
+            $args .= 'product_id=' . get_the_ID();
         }
         wp_enqueue_script( $this->plugin_slug . '-inject3', $script_url . '?' . $args, false);
 
@@ -1360,6 +1359,7 @@ class WCISPlugin {
 			}elseif ($req->query_vars['instantsearchplus'] == 'get_product'){			    
 				$identifier = $req->query_vars['instantsearchplus_parameter'];			
 				self::send_product_update($identifier, 'update');
+				print_r(self::get_product_from_post($identifier));
 				status_header(200);
 				exit();
 			}elseif ($req->query_vars['instantsearchplus'] == 'update_batch_size'){
