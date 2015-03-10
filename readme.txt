@@ -1,14 +1,13 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
-Donate link:
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search
 Requires at least: 3.3
-Tested up to: 4.1
+Tested up to: 4.1.1
 Stable tag: 1.2.18
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Boost conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
+InstantSearch+ for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
 Add the fastest, most advanced, **cloud-based** instant search to your WooCommerce store, and see your conversion rates go up. 
@@ -279,4 +278,3 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 = 1.0.0 =
 * First version!
 
-== Updates ==
