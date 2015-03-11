@@ -10,15 +10,15 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 InstantSearch+ for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
+**Note: InstandSearch+ is FREE for stores with up to 50 products, and offers affordable paid subscriptions for larger stores from $4.99 per month or the discounted price of $48 per year. 
+There is 30 day trial period where you can experience all of InstantSearch+ premium features. 
+Full pricing information can be found at http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce**  
+
 Add the fastest, most advanced, **cloud-based** instant search to your WooCommerce store, and see your conversion rates go up. 
 **Search-as-you-type** product names, descriptions, images, and prices from the first typed character. 
-Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.
+Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.  
 
 Play with our demo site at http://woocommerce.instantsearchplus.com  
-
-Enjoy our 30-day FREE TRIAL and then sign up to one of our affordable subscriptions from $4.99 per month or the discounted price of $48 per year. InstantSearch+ is free up to 50 products.    
-To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
-
 
 [youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
 
