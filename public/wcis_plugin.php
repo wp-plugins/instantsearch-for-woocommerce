@@ -17,10 +17,10 @@ if ( ! defined( 'ABSPATH' ) )
  * @author  InstantSearchPlus <support@instantsearchplus.com>
  */
 class WCISPlugin {      
-//     const SERVER_URL = 'http://woo.instantsearchplus.com/';
-	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
+    const SERVER_URL = 'http://woo.instantsearchplus.com/';
+// 	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
 
-	const VERSION = '1.2.18';
+	const VERSION = '1.3.0';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -1734,7 +1734,7 @@ class WCISPlugin {
 	}
 	
 	function the_posts_handler($posts){
-	    if (is_search() && !$this->fulltext_disabled){
+	    if (is_search() && !$this->fulltext_disabled && $this->wcis_fulltext_ids != null){
 			global $wp_query;
 			
 			$total_results = $this->wcis_total_results;	
@@ -1756,6 +1756,7 @@ class WCISPlugin {
 				}
 			}
 			unset($this->wcis_fulltext_ids);
+			$this->wcis_fulltext_ids = null;
 			$this->wcis_total_results = 0;
 		}
 

@@ -1,67 +1,65 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
-Donate link:
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search
 Requires at least: 3.3
-Tested up to: 4.1
-Stable tag: 1.2.18
+Tested up to: 4.1.1
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Boost conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
+InstantSearch+ for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
+**Note: InstandSearch+ is FREE for stores with up to 50 products, and offers affordable paid subscriptions for larger stores from $4.99 per month or the discounted price of $48 per year. 
+There is 30 day trial period where you can experience all of InstantSearch+ premium features. 
+Full pricing information can be found at http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce**  
+
 Add the fastest, most advanced, **cloud-based** instant search to your WooCommerce store, and see your conversion rates go up. 
 **Search-as-you-type** product names, descriptions, images, and prices from the first typed character. 
-Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.
+Fast cloud-CDN-based results, Product promotions, and personalized real-time search query suggestions make it a must-have for your eCommerce store.  
 
 Play with our demo site at http://woocommerce.instantsearchplus.com  
-
-Enjoy our 30-day FREE TRIAL and then sign up to one of our affordable subscriptions from $4.99 per month or the discounted price of $48 per year. InstantSearch+ is free up to 50 products.    
-To learn more please visit: http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce
-
 
 [youtube="https://www.youtube.com/watch?v=GbbzkIMcXoM"]
 
 
-= Features =
-* **Lightning-Fast Instant Search for WooCommerce Stores**  
- * **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
- * Search-as-you-type product names, images, and prices from the **first typed character**
- * In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
+= Lightning-Fast Instant Search for WooCommerce Stores =
+* **100% Cloud-based, CDN-backed**, product search results with the lowest possible latency
+* Search-as-you-type product names, images, and prices from the **first typed character**
+* In search, speed is a big deal. Google knows it. Amazon knows it. Faster results equal better conversion. That's why we make such a big deal of our lightning-fast service. Your users deserve it. 
 
-* **Advanced, Relevant, & Integrated Search Results Page**  
- * Contemporary, professionally-looking **search results page**
- * **Did You Mean** auto typo correction
- * Learning search algorithm that continuously gets better
- * **Search term highlighting** - visual indication of the end user search term in found results
+= Advanced, Relevant, & Integrated Search Results Page =
+* Contemporary, professionally-looking **search results page**
+* **Did You Mean** auto typo correction
+* Learning search algorithm that continuously gets better
+* **Search term highlighting** - visual indication of the end user search term in found results
 
-* **Product Instant Search & Promotions**  
- * Contextual product promotions based on what visitors type - Promote specific products
- * Product suggestions based on your WooCommerce store catalog
- * Turbolinks that link destinations to non-product searches & synonyms
+= Product Instant Search & Promotions =
+* Contextual product promotions based on what visitors type - Promote specific products
+* Product suggestions based on your WooCommerce store catalog
+* Turbolinks that link destinations to non-product searches & synonyms
 
-* **Personal Real Time Search Suggestions**  
- * Popular Searches based on what other people type
- * Personal history Searches based on what the visitor previously searched
- * Advanced word matching and typo correction. Your visitor will get suggestions even when they misspell
+= Personal Real Time Search Suggestions =
+* Popular Searches based on what other people type
+* Personal history Searches based on what the visitor previously searched
+* Advanced word matching and typo correction. Your visitor will get suggestions even when they misspell
 
-* **Online InstantSearch Portal and Search Terms Report**
- * Usage dashboard and email reports
- * Top search suggestions - what people searched for on your WooCommerce store
- * Top products - which product suggestions were chosen
- * Top under-served searches - what people look for but cannot find
+= Online InstantSearch Portal and Search Terms Report =
+* Usage dashboard and email reports
+* Top search suggestions - what people searched for on your WooCommerce store
+* Top products - which product suggestions were chosen
+* Top under-served searches - what people look for but cannot find
 
-* **Seamless Integration with Your WooCommerce Store**
- * 2-minute installation
- * 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
- * Customizable look and feel to fit your store frontend
- * Desktop, tablet and mobile theme supported
+= Seamless Integration with Your WooCommerce Store =
+* 2-minute installation
+* 100% pure additive Javascript and CSS goodness - does not break or replace your store's original functionality or built-in search
+* Customizable look and feel to fit your store frontend
+* Desktop, tablet and mobile theme supported
 
-* **Automatically Generated Search Filters**  
- * Automatically generated, fully customizable **filters**
- * Can include price, vendor, weight, type, tags, or any other product option
- * Help users narrow down search results
+= Automatically Generated Search Filters =
+* Automatically generated, fully customizable **filters**
+* Can include price, vendor, weight, type, tags, or any other product option
+* Help users narrow down search results
 
 
 == Installation ==
@@ -126,15 +124,20 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 == Screenshots ==
 
 1. Worldclass autocomplete and search suggestions for WooCommerce.
-2. Search Analytics to see what people search on your site, what they find, and what they don't.
-3. Contemporary, professional search results page, with Did-you-mean
-4. State of the art search results page, Did you mean, and search terms highlight
-5. Automatically generated search filters for WooCommerce
+2. Analytics Dashboard to help you serve your users better.
+3. Search Analytics to see what people search on your site, what they find, and what they don't.
+4. Contemporary, professional search results page, with Did-you-mean
+5. State of the art search results page, Did you mean, and search terms highlight
+6. Automatically generated search filters for WooCommerce
 
 
 
 
 == Changelog ==
+
+= 1.3.0 = 
+* Some server changes and adjustments
+* Bug fix on multiple triggering of "the_posts" filter hook on search
 
 = 1.2.18 = 
 * Compatible with WooCommerce 2.3.5 (tested)
@@ -280,4 +283,3 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 = 1.0.0 =
 * First version!
 
-== Updates ==
