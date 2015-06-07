@@ -289,9 +289,13 @@ class WCISPlugin {
 	public static function uninstall( $network_wide ) {	
 
 		foreach(self::get_blog_ids() as $blog_id) {
-			self::switch_to_blog($blog_id);
+			if (function_exists ( 'is_multisite' ) && is_multisite ()) {
+				switch_to_blog($blog_id);
+			}
 			WCISPlugin::single_uninstall($network_wide);
-			self::restore_current_blog();
+			if (function_exists ( 'is_multisite' ) && is_multisite ()) {
+				restore_current_blog();
+			}
 		}
 	}
 		
@@ -1467,7 +1471,23 @@ class WCISPlugin {
 				self::execute_update_request();
 				exit();		
 			} elseif ($req->query_vars['instantsearchplus'] == 'category_sync'){ 
+				$is_store_id_exists = true;
+				$store_id = get_current_blog_id();
+				try {
+					$store_id = $req->query_vars['instantsearchplus_parameter'];
+				} catch(Exception $e) {
+					$is_store_id_exists = false;
+				}
+				
+				if($is_store_id_exists) {
+					self::switch_to_blog($store_id);
+				}
 			    self::send_categories_as_batch();
+			    
+			    if($is_store_id_exists) {
+			    	self::restore_current_blog();
+			    }
+			    
 			    status_header(200);
 			    exit();
 			} elseif ($req->query_vars['instantsearchplus'] == 'get_batches'){
