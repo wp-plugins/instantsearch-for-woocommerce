@@ -677,6 +677,8 @@ class WCISPlugin {
         	        $thumbnail = $match[1];
         	    } else if (preg_match('/data-lazy-original="([^\"]+)"/s', $thumbnail, $match)){
         	        $thumbnail = $match[1];
+        	    } else if (preg_match('/lazy-src="([^\"]+)"/s', $thumbnail, $match)){      // Animate Lazy Load Wordpress Plugin
+        	        $thumbnail = $match[1];
         	    } else {
         	        preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
         	        $thumbnail = array_pop($result);
@@ -1330,6 +1332,7 @@ class WCISPlugin {
 						'req_status'			=> 'OK',
 						'woocommerce_exists'	=> $woocommerce_exists,
 						'is_multisite'			=> $is_multisite,
+				        'WP_HTTP_BLOCK_EXTERNAL'=> defined(WP_HTTP_BLOCK_EXTERNAL),     # in defined - block external requests
 				);
 				exit(json_encode($response));
 				
