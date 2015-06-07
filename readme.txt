@@ -2,8 +2,8 @@
 Contributors: instantsearchplus
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search
 Requires at least: 3.3
-Tested up to: 4.1.1
-Stable tag: 1.3.0
+Tested up to: 4.2.2
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -134,6 +134,9 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 
 
 == Changelog ==
+
+= 1.3.1 = 
+* Multisite support
 
 = 1.3.0 = 
 * Some server changes and adjustments

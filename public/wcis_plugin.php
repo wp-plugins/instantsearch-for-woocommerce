@@ -20,7 +20,7 @@ class WCISPlugin {
     const SERVER_URL = 'http://woo.instantsearchplus.com/';
 	#const SERVER_URL = 'http://0-1zarovv.acp-magento.appspot.com/';
 	const ERROR_URL = 'http://0-1zarovv.acp-magento.appspot.com/plugin_test';
-	const VERSION = '1.3.0';
+	const VERSION = '1.3.1';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
