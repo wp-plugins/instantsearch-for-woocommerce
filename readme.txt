@@ -118,8 +118,16 @@ Simply add HTML based form to your Wordpress theme like this and we’ll pick it
 	  		`<input type="text" name="s" class="isp_search_box_input" placeholder="Search..." autocomplete="OfF" autocorrect="off" autocapitalize="off" style="outline: none; width:10rem; height:2.3rem;" id="isp_search">`  
 	  		`<input type="hidden" name="post_type" value="product">`  
 	  		`<input type="image" src="/wp-content/plugins/instantsearch-for-woocommerce/widget/assets/images/magnifying_glass.png" class="isp_widget_btn" value="">`  
-	  `</form>`  
-
+	  `</form>` 
+	  
+= Does InstantSearch + support multisites? =
+Yes, we support multisites from Version 1.3.1 and above.
+Simply install our plugin -
+https://wordpress.org/plugins/instantsearch-for-woocommerce/
+After activating the plugin you will see the InstantSearch + banner on
+each store.
+Give us a few minutes to learn  about your products and  categories.
+Start typing in the search box and experience the magic of autocomplete.
 
 == Screenshots ==
 
