@@ -321,7 +321,7 @@ class WCISPlugin {
 		$resp = wp_remote_post( $url, $args );
 	
 		// deleting the database
-		delete_option('wcis_site_id');
+		#delete_option('wcis_site_id');
 		delete_option('wcis_batch_size');
 		delete_option('authentication_key');
 		delete_option('wcis_timeframe');
