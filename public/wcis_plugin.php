@@ -209,25 +209,6 @@ class WCISPlugin {
 	public function activate( $network_wide )
 	{			
 		self::single_activate();
-		
-// 		if ( function_exists( 'is_multisite' ) && is_multisite() ) {
-// 			if ( $network_wide  ) {
-// 				// Get all blog ids
-//                 $blog_ids = self::get_blog_ids();
-
-//                 foreach ( $blog_ids as $blog_id ) {
-// 	                self::switch_to_blog( $blog_id );
-// 	                self::single_activate();
-//                 }
-// 				self::restore_current_blog();
-// 			} else {
-//             	self::single_activate();
-//             }
-
-// 		} else {
-// 			self::single_activate();
-// 		}
-//             wp_redirect( admin_url( 'admin.php?page=WCISPlugin' ) );
 	}
 
 	/**
@@ -241,10 +222,14 @@ class WCISPlugin {
 	 *                                       deactivated on an individual blog.
 	 */
 	public function deactivate( $network_wide ) {	
-		foreach(self::get_blog_ids() as $blog_id) {
-			self::switch_to_blog($blog_id);
+		if(self::is_network_admin()) {
+			foreach(self::get_blog_ids() as $blog_id) {
+				self::switch_to_blog($blog_id);
+				self::single_deactivate($network_wide);
+				self::restore_current_blog();
+			}
+		} else {
 			self::single_deactivate($network_wide);
-			self::restore_current_blog();
 		}
         
 	}
@@ -287,15 +272,18 @@ class WCISPlugin {
 	 *                                       deactivated on an individual blog.
 	 */
 	public static function uninstall( $network_wide ) {	
-
-		foreach(self::get_blog_ids() as $blog_id) {
-			if (function_exists ( 'is_multisite' ) && is_multisite ()) {
-				switch_to_blog($blog_id);
+		if (function_exists ( 'is_multisite' ) && is_multisite ()) {
+			if(is_network_admin()) {
+				foreach(self::get_blog_ids() as $blog_id) {
+					switch_to_blog($blog_id);
+					WCISPlugin::single_uninstall($network_wide);
+					restore_current_blog();
+				}
+			} else {
+				WCISPlugin::single_uninstall($network_wide);
 			}
+		} else {
 			WCISPlugin::single_uninstall($network_wide);
-			if (function_exists ( 'is_multisite' ) && is_multisite ()) {
-				restore_current_blog();
-			}
 		}
 	}
 		
@@ -405,22 +393,13 @@ class WCISPlugin {
 		}
 	}
 	
-	private function print_info() {
-		$blog_details = get_blog_details('1');
-		self::print_to_log($blog_details->blog_id);
-		self::print_to_log($blog_details->site_id);
-		self::print_to_log($blog_details->domain);
-		self::print_to_log($blog_details->public);
-		self::print_to_log($blog_details->archived);
-		self::print_to_log($blog_details->mature);
-		self::print_to_log($blog_details->spam);
-		self::print_to_log($blog_details->deleted);
-		self::print_to_log($blog_details->lang_id);
-		self::print_to_log($blog_details->blogname);
-		self::print_to_log($blog_details->siteurl);
+	private function is_network_admin() {
+		if (function_exists ( 'is_multisite' ) && is_multisite ()) {
+			return is_network_admin();
+		}
 		
+		return false;
 	}
-	
     
 /**
 	 * Fired for each blog when the plugin is activated.
@@ -441,7 +420,6 @@ class WCISPlugin {
 		
 		$url = self::SERVER_URL . 'wc_install';
 		$stores_array = array ();
-		$mainsiteUuid = - 1;
 		
 		try {
 			if (function_exists ( 'is_multisite' ) && is_multisite ()) {
@@ -456,10 +434,8 @@ class WCISPlugin {
 		}
 		// end multisite
 		
-		if(get_current_blog_id() == self::MAIN_SITE_BLOG_ID) {
-			
-			#self::print_info();
-		
+		if(self::is_network_admin()) {
+
 			foreach ( self::get_blog_ids () as $blog_id ) {
 				self::switch_to_blog($blog_id);
 				
@@ -469,22 +445,7 @@ class WCISPlugin {
 				
 				self::restore_current_blog ();
 	 		}
-		} else {
-			self::switch_to_blog(self::MAIN_SITE_BLOG_ID);
-			
-			$stores_array [self::MAIN_SITE_BLOG_ID] = array ();
-			$stores_array [self::MAIN_SITE_BLOG_ID] ['product_count'] = wp_count_posts ( 'product' )->publish;
-			$stores_array [self::MAIN_SITE_BLOG_ID] ['site'] = get_option ( 'siteurl' );
-			
-			self::restore_current_blog ();
-			$blog_id = get_current_blog_id();
-
-			# in previous blog
-			$stores_array [$blog_id] = array ();
-			$stores_array [$blog_id] ['product_count'] = wp_count_posts ( 'product' )->publish;
-			$stores_array [$blog_id] ['site'] = get_option ( 'siteurl' );
-
-		}
+		} 
 
 		$json_stores = json_encode ( $stores_array );
 
@@ -496,18 +457,23 @@ class WCISPlugin {
 						'store_id' => get_current_blog_id(),
 						'email' => get_option ( 'admin_email' ),
 						'is_multisite' => $is_multisite_on,
-						'stores' => $json_stores,
+						'is_network_admin' => is_network_admin(),
 						'version' => self::VERSION
 				),
 				'timeout' => 20
 		);
-
 		
-		if (get_option('wcis_site_id')) {
-			$args['body']['site_id'] = get_option('wcis_site_id');
+		if(self::is_network_admin()) {
+			
+			$args['body']['stores'] = $json_stores;
 		}
-
 		
+		self::switch_to_blog('1');
+		if(get_option('wcis_site_id')) {
+			$args['body']['site_id'] = get_option('wcis_site_id'); // the group uuid always stored in main site
+		}
+		self::restore_current_blog();
+
 		$resp = wp_remote_post ( $url, $args );
 		
 		if (is_wp_error ( $resp ) || $resp ['response'] ['code'] != 200) {
@@ -540,6 +506,7 @@ class WCISPlugin {
 			$send_products = null;
 			
 			$last_blog = get_current_blog_id();
+			$site_uuid = null;
 			foreach ( $response_json as $store_id => $result ) {
 				
 				self::switch_to_blog ( $store_id );
@@ -549,6 +516,9 @@ class WCISPlugin {
 					$site_id = $result->{'site_id'};
 					$batch_size = $result->{'batch_size'};
 					update_option ( 'wcis_site_id', $site_id );
+					if($site_uuid == null) {
+						$site_uuid = $site_id;
+					}
 					update_option ( 'wcis_batch_size', $batch_size );
 					$max_num_of_batches = $result->{'max_num_of_batches'};
 					update_option ( 'max_num_of_batches', $max_num_of_batches );
@@ -572,6 +542,12 @@ class WCISPlugin {
 				
 				self::restore_current_blog();
 			}
+			
+			self::switch_to_blog('1');
+			if($site_uuid != null) {
+				update_option('wcis_site_id', $site_uuid);
+			}
+			self::restore_current_blog();
 			
 			foreach($send_products_need_batches as $store_id=>$send_products) {
 				self::switch_to_blog($store_id);
