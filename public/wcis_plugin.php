@@ -20,7 +20,8 @@ class WCISPlugin {
     const SERVER_URL = 'http://woo.instantsearchplus.com/';
     const DASHBOARD_URL = 'https://woo.instantsearchplus.com/';
     
-	// const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
+	#const SERVER_URL = 'http://0-1zarovv.acp-magento.appspot.com/';
+	#const DASHBOARD_URL = self::SERVER_URL;
 	const ERROR_URL = 'http://0-1zarovv.acp-magento.appspot.com/plugin_test';
 	const VERSION = '1.3.2';
 	
@@ -275,21 +276,21 @@ class WCISPlugin {
 	 *                                       deactivated on an individual blog.
 	 */
 	public static function uninstall( $network_wide ) {	
-	    WCISPlugin::single_uninstall($network_wide);
-	    /*
 		if (function_exists ( 'is_multisite' ) && is_multisite ()) {
-			if(is_network_admin()) {
-				foreach(self::get_blog_ids() as $blog_id) {
-					switch_to_blog($blog_id);
-					WCISPlugin::single_uninstall($network_wide);
-					restore_current_blog();
-				}
-			} else {
+			$blog_ids = array();
+			$sites = wp_get_sites ();
+			foreach ( $sites as $site ) {
+				$blog_ids[]=$site['blog_id'];
+			}
+			
+			foreach($blog_ids as $blog_id) {
+				switch_to_blog($blog_id);
 				WCISPlugin::single_uninstall($network_wide);
+				restore_current_blog();
 			}
 		} else {
 			WCISPlugin::single_uninstall($network_wide);
-		}*/
+		}
 	}
 		
 	private static function single_uninstall($network_wide) {
@@ -467,7 +468,6 @@ class WCISPlugin {
 				),
 				'timeout' => 20
 		);
-
 		
 		if(self::is_network_admin()) {
 			
@@ -539,9 +539,9 @@ class WCISPlugin {
 					self::send_error_report ( $err_msg );
 				}
 				
-				$send_products = self::push_wc_products ();
-				if($send_products!=null) {
-					$send_products_need_batches[$store_id]=$send_products;
+				$additional_fetch_info = self::push_wc_products ();
+				if($additional_fetch_info!=null) {
+					$send_products_need_batches[$store_id] = $additional_fetch_info;
 				}
 
 				wp_schedule_single_event ( time () + self::CRON_SEND_CATEGORIES_TIME_INTERVAL, 'instantsearchplus_send_all_categories' );
@@ -555,18 +555,39 @@ class WCISPlugin {
 			}
 			self::restore_current_blog();
 			
-			foreach($send_products_need_batches as $store_id=>$send_products) {
+			$additional_fetch_array = array();
+			foreach($send_products_need_batches as $store_id=>$additional_fetch_info) {
 				self::switch_to_blog($store_id);
-				self::send_products_batch($send_products);
-				unset($send_products);
+				$additional_fetch_array[] = self::get_additional_fetch_args($additional_fetch_info);
+
 				self::restore_current_blog();
 			}
 			
 			unset($send_products_need_batches);
 			
+			if(count($additional_fetch_array) > 0) {
+				$additional_fetch_array_encoded = json_encode($additional_fetch_array);
+				self::request_additional_fetch($additional_fetch_array_encoded);
+			}
+			
 			self::switch_to_blog($last_blog);
 		}
 
+	}
+	
+	private function request_additional_fetch($additional_fetch_array_encoded) {
+		$resp = wp_remote_post(
+				 self::SERVER_URL . 'wc_additional_fetch', 
+				 array('body' => 
+				 		array(
+				 				'infos' => $additional_fetch_array_encoded
+				 				),
+				 		'timeout' => 10
+				 ));
+		if (is_wp_error($resp) || $resp['response']['code'] != 200){
+			$err_msg = "additional_fetch_info request failed batch: " . $batch_number;
+			self::send_error_report($err_msg);
+		}
 	}
 	
 	public function on_category_edit($category_id = null){
@@ -652,8 +673,29 @@ class WCISPlugin {
 		
 		return new WP_Query($query_args);
 	}
+	
+	private function get_additional_fetch_args($additional_fetch_info, $is_products_install_batch = true) {
+		$total_products 				= $additional_fetch_info['total_products'];
+		$total_pages 					= $additional_fetch_info['total_pages'];
+		 
+		if ($total_products == 0) {
+			$batch_number = 0;
+		} else {
+			$batch_number = $additional_fetch_info['current_page'];
+		}
+		
+		return array (
+			'site' => get_option('siteurl'),
+			'site_id' => get_option('wcis_site_id'),
+			'store_id' => get_current_blog_id (),
+			'total_batches' => $total_pages,
+			'wcis_batch_size' => get_option ( 'wcis_batch_size' ),
+			'total_products' => $total_products,
+			'batch_number' => $batch_number,
+		);
+	}
     
-    private function push_wc_products()
+    private function push_wc_products($is_products_install_batch = true)
     {
         /**
          * Check if WooCommerce is active
@@ -684,8 +726,8 @@ class WCISPlugin {
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
 		                    wp_schedule_single_event(time() + (self::CRON_SEND_CATEGORIES_TIME_INTERVAL * 10 /*5 minutes*/),
 		                    		 'instantsearchplus_send_batches_if_unreachable'); 
-	
-		                	$is_additional_fetch_required = true;
+		                    
+		                    $is_additional_fetch_required = true;
 		                }
 		                
 		                $send_products = array(
@@ -693,21 +735,24 @@ class WCISPlugin {
 		                		'total_products'				=> $total, 
 		                		'current_page' 					=> $page, 
 		                		'products'						=> $product_array,
-		                		'is_additional_fetch_required' 	=> false, 
+		                		// in new version we never send additional fetch in send batch
+		                		
 		                );
 
-
-		                self::send_products_batch($send_products);
+		                self::send_products_batch($send_products, $is_products_install_batch);
 		                
 		                // clearing array
 		                unset($product_array);	
-		                if($is_additional_fetch_required) {
-		                	$send_products['products'] = array();
-		                	$send_products['is_additional_fetch_required'] = $is_additional_fetch_required;
-		                	return $send_products;
-		                }
+		                
 		                $product_array = array();
 		                unset($send_products);
+		                if($is_additional_fetch_required) {
+		                	return array(
+		                			'total_pages' => $total_pages,
+		                			'total_products' => $total,
+		                			'current_page' => $page
+		                	);
+		                }
 		                
 		                $page = $page + 1;
 		                
@@ -741,6 +786,7 @@ class WCISPlugin {
         }
         
         return null;
+
     }
     
     private function push_wc_batch($batch_num, $store_id){ 
@@ -822,6 +868,8 @@ class WCISPlugin {
     	    $product_tags[] = $tag->name;
     	}
     	
+    	
+    	
     	$send_product = array('product_id' => $product->id,
     			'currency' => get_woocommerce_currency(),
     			'price' =>$product->get_price(),
@@ -845,7 +893,6 @@ class WCISPlugin {
     			'is_backorders_allowed' => $product->backorders_allowed(),
     			'is_purchasable' => $product->is_purchasable(),
     			'is_in_stock' => $product->is_in_stock( ),
-    			 
     			'product_status' => get_post_status($post_id),
     	);
     	
@@ -1121,7 +1168,6 @@ class WCISPlugin {
     	$total_products 				= $products['total_products'];
     	$total_pages 					= $products['total_pages'];
     	$product_chunks 				= $products['products'];   	
-    	$is_additional_fetch_required 	= $products['is_additional_fetch_required'];
     	
     	if ($total_products == 0) {
     		$batch_number = 0;
@@ -1144,7 +1190,6 @@ class WCISPlugin {
 						'authentication_key' => get_option ( 'authentication_key' ),
 						'total_products' => $total_products,
 						'batch_number' => $batch_number,
-						'is_additional_fetch_required' => $is_additional_fetch_required,
 						'is_products_install_batch' => $is_products_install_batch
 						
 				),
@@ -1444,10 +1489,14 @@ class WCISPlugin {
 				exit(json_encode($response));
 				
 			} elseif ($req->query_vars['instantsearchplus'] == 'sync'){ 
-				$send_products = self::push_wc_products();
-				if ($send_products != null){
-				    self::send_products_batch($send_products);
-				}
+				$additional_fetch_info = self::push_wc_products(false);
+				if($additional_fetch_info != null) {
+					$additional_fetch_array[] = self::get_additional_fetch_args($additional_fetch_info, false);
+					$additional_fetch_array_encoded = json_encode($additional_fetch_array);
+					self::request_additional_fetch($additional_fetch_array_encoded);
+					unset($additional_fetch_array);
+				}		
+				
 				status_header(200);
 				exit();		
 			} elseif ($req->query_vars['instantsearchplus'] == 'on_demand_sync'){ 
