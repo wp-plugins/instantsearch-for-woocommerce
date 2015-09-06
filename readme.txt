@@ -1,4 +1,4 @@
-=== InstantSearch+ for WooCommerce ===
+=== Instant Search + for WooCommerce ===
 Contributors: instantsearchplus
 Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search, search plugin, advance search, ajax search, brilliant search, ecommerce search, janothemes, janothemes search, products search, search, search widget, wp search
 Requires at least: 3.3
