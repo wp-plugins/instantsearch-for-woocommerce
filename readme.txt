@@ -1,13 +1,13 @@
 === InstantSearch+ for WooCommerce ===
 Contributors: instantsearchplus
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search, search plugin, advance search, ajax search, brilliant search, ecommerce search, janothemes, janothemes search, products search, search, search widget, wp search
 Requires at least: 3.3
-Tested up to: 4.2.2
-Stable tag: 1.3.2
+Tested up to: 4.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-InstantSearch+ for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
+Instant Search + for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
 
 == Description ==
 **Note: InstandSearch+ is FREE for stores with up to 50 products, and offers affordable paid subscriptions for larger stores from $4.99 per month or the discounted price of $48 per year. 
@@ -142,6 +142,15 @@ Start typing in the search box and experience the magic of autocomplete.
 
 
 == Changelog ==
+
+= 1.3.4 = 
+* Product visibility bug fix
+
+= 1.3.3 = 
+* WooCommerce product quick edit bug fix
+* Bug fix on search with no results will display 0 products instead of all
+* Compatible with WooCommerce 2.4.6 (tested)
+* Compatible with WordPress 4.3 (tested)
 
 = 1.3.2 = 
 * Products synchronization bug fix

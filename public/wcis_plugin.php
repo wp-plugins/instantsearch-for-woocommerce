@@ -20,10 +20,10 @@ class WCISPlugin {
     const SERVER_URL = 'http://woo.instantsearchplus.com/';
     const DASHBOARD_URL = 'https://woo.instantsearchplus.com/';
     
-	#const SERVER_URL = 'http://0-1zarovv.acp-magento.appspot.com/';
-	#const DASHBOARD_URL = self::SERVER_URL;
+// 	const SERVER_URL = 'http://0-2vk.acp-magento.appspot.com/';
+// 	const DASHBOARD_URL = self::SERVER_URL;
 	const ERROR_URL = 'http://0-1zarovv.acp-magento.appspot.com/plugin_test';
-	const VERSION = '1.3.2';
+	const VERSION = '1.3.3';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
@@ -92,6 +92,7 @@ class WCISPlugin {
 //         add_action( 'publish_post', array( $this, 'on_product_update' ));
 
         // product change handlers
+        add_action('woocommerce_product_quick_edit_save', array($this, 'on_product_quick_save'));
         add_action('save_post', array( $this, 'on_product_save'));
         add_action('trashed_post', array( $this, 'on_product_delete'));
         add_action('woocommerce_order_status_on-hold', array( $this, 'quantity_change_handler'), 501);
@@ -119,8 +120,8 @@ class WCISPlugin {
         add_action('instantsearchplus_send_logging_record', array($this, 'send_logging_record'), 10, 1);
         
         add_action('instantsearchplus_send_all_categories', array($this, 'send_categories_as_batch'));
-        add_action('instantsearchplus_send_batches_if_unreachable', array($this, 'send_batches_if_unreachable'));
-        
+        add_action('instantsearchplus_send_batches_if_unreachable', 
+        		array($this, 'send_batches_if_unreachable'), 10, 1);
         // FullText search
         add_filter( 'posts_search', array( $this, 'posts_search_handler' ) );
         add_action( 'pre_get_posts', array( $this, 'pre_get_posts_handler' ) );
@@ -147,6 +148,11 @@ class WCISPlugin {
         
         add_action( 'woocommerce_scheduled_sales', array( $this, 'on_scheduled_sales'));
         
+	}
+	
+
+	public function on_product_quick_save($product) {
+		self::on_product_save($product->id);
 	}
 
 	/**
@@ -241,7 +247,6 @@ class WCISPlugin {
 	private function single_deactivate($network_wide) {
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_request_event' );
 		wp_clear_scheduled_hook( 'instantsearchplus_cron_check_alerst' );
-		wp_clear_scheduled_hook( 'instantsearchplus_send_logging_record' );
 		wp_clear_scheduled_hook( 'instantsearchplus_send_all_categories' );
 		wp_clear_scheduled_hook( 'instantsearchplus_send_batches_if_unreachable' );
 		
@@ -315,7 +320,7 @@ class WCISPlugin {
 		$resp = wp_remote_post( $url, $args );
 	
 		// deleting the database
-		#delete_option('wcis_site_id');
+		delete_option('wcis_site_id');
 		delete_option('wcis_batch_size');
 		delete_option('authentication_key');
 		delete_option('wcis_timeframe');
@@ -372,15 +377,6 @@ class WCISPlugin {
 		}
 		return $blog_ids;
 	}
-	private function print_to_log($logString) {
-		$resp = wp_remote_post ( self::ERROR_URL, array (
-	
-				'body' => array (
-						'log_string' => $logString
-				),
-				'timeout' => 30
-		) );
-	}
 	
 	private function is_main_site() {
 		return get_current_blog_id () == self::MAIN_SITE_BLOG_ID;
@@ -390,7 +386,6 @@ class WCISPlugin {
 		if (function_exists ( 'is_multisite' ) && is_multisite ()) {
 			switch_to_blog($blog_id);
 		}
-		
 	}
 	
 	private function restore_current_blog() {
@@ -722,10 +717,12 @@ class WCISPlugin {
 		            			$product_array[] = $product;
 		            		}
 		            	}
+		            	
 		                if($max_num_of_batches == $page && $total_pages > $max_num_of_batches){
 		                	// need to schedule request from server side to send the rest of the batches after activation ends
 		                    wp_schedule_single_event(time() + (self::CRON_SEND_CATEGORIES_TIME_INTERVAL * 10 /*5 minutes*/),
-		                    		 'instantsearchplus_send_batches_if_unreachable'); 
+		                    		 'instantsearchplus_send_batches_if_unreachable',
+		                    		array($page + 1)); 
 		                    
 		                    $is_additional_fetch_required = true;
 		                }
@@ -928,6 +925,21 @@ class WCISPlugin {
 
     	    $send_product['attributes'] = $attributes;
     	    $send_product['total_variable_stock'] = $variable->get_total_stock();
+    	    
+    	    try{
+    	        if ( version_compare( WOOCOMMERCE_VERSION, '2.2', '>=' ) ){
+    	            if (function_exists('wc_get_product')){
+        	            $send_product['visibility'] = wc_get_product($product->id)->is_visible();
+        	            $send_product['product_type'] = wc_get_product($product->id)->product_type;
+    	            }
+    	        } else {
+    	            if(function_exists('get_product')){
+        	            $send_product['visibility'] = get_product($product->id)->is_visible();
+        	            $send_product['product_type'] = get_product($product->id)->product_type;
+    	            }
+    	        }
+    	    } catch (Exception $e){}
+    	    
     	}catch (Exception $e){
     	    $err_msg = "exception raised in attributes";
     	    self::send_error_report($err_msg);
@@ -1268,23 +1280,37 @@ class WCISPlugin {
         }
     }
     
-    function send_batches_if_unreachable($batch_num = 0){  
-        if ($batch_num == 0){
-            $err_msg = "site: " . get_option('siteurl') . "unreachable, sending batches...";
-            self::send_error_report($err_msg);
-            $batch_num = get_option('max_num_of_batches');
-        }
+    const CRON_SEND_BATCHES_UNREACHABLE_INTERVAL = 10;
     
+    function send_batches_if_unreachable($batch_num){  
+        $err_msg = "site: " . get_option('siteurl') . " unreachable, sending batches...";
+        self::send_error_report($err_msg);
+   
         $loop = self::query_products(get_current_blog_id(), $batch_num); 
         $total_pages = $loop->max_num_pages;	// total number of batches
-    
-        while ($total_pages >= $batch_num){
+
+        $max_batch = get_option('max_num_of_batches') + $batch_num;
+    	if($max_batch < $total_pages) {
+    		$min = $max_batch;
+    	} else {
+    		$min = $total_pages;
+    	}
+
+        while ($min >= $batch_num){
             if (get_option('cron_send_batches_disable')){
                 return;
             }
             self::push_wc_batch($batch_num, get_current_blog_id()); 
             $batch_num++;
         }
+       
+        if($max_batch < $total_pages) {
+            
+        	wp_schedule_single_event(time() + self::CRON_SEND_BATCHES_UNREACHABLE_INTERVAL,
+        			'instantsearchplus_send_batches_if_unreachable',
+        			array($batch_num));
+        }
+ 
     }
     
     private function send_product_update($post_id, $action)
@@ -1361,6 +1387,12 @@ class WCISPlugin {
         	$is_admin_bar_showing = "is_admin_bar_showing=0&";
         }
         $args .= $is_admin_bar_showing;
+        
+        if (is_user_logged_in()){
+            $args .= 'is_user_logged_in=1&';
+        } else {
+            $args .= 'is_user_logged_in=0&';
+        }         
         
         if ($this->products_per_page){
             $products_per_page = $this->products_per_page; 
@@ -1688,23 +1720,6 @@ class WCISPlugin {
 	
 	
 	function send_logging_record($url_params_arr){
-		$url = self::SERVER_URL . 'wc_logging_record';
-		$not_needed_keys = array('s', 'submit');
-
-		$record_array = array();
-		foreach ($url_params_arr as $key => $value){
-			if (in_array($key, $not_needed_keys))
-				continue;
-			$record_array[] = array('key' 	=> $key,
-									'value' => $value);
-		}
-
-		$args = array(
-				'body' => array( 'site' => get_option('siteurl'),
-						'site_id' => get_option( 'wcis_site_id' ),
-						'logging_record' => json_encode($record_array)),
-		);
-		$resp = wp_remote_post( $url, $args );
 	}
 	
 	// FullText search Section
@@ -1722,7 +1737,6 @@ class WCISPlugin {
 					unset($url_params[$key]);
 				}
 			}
-			wp_schedule_single_event(time(), 'instantsearchplus_send_logging_record', array($url_params));
 			
 			if (strpos($url_args, 'min_price=') !== false && strpos($url_args, 'max_price=') !== false){
 				return self::on_fulltext_disable_query($wp_query);
@@ -1732,7 +1746,7 @@ class WCISPlugin {
 				return self::on_fulltext_disable_query($wp_query);
 			}
 			
-			$q = (isset($query['s'])) ? $query['s'] : get_search_query();
+			$q = urldecode((isset($query['s'])) ? $query['s'] : get_search_query());
 			// cleaning search query from '\'
 			$q = str_replace('\\', '', $q);
 			
@@ -1803,6 +1817,7 @@ class WCISPlugin {
 				}
 					
                 $this->wcis_fulltext_ids = $product_ids;
+                
 				if (array_key_exists('total_results', $response_json) && $response_json['total_results'] != 0){
 				    $this->wcis_total_results = $response_json['total_results'];
 				} else {
@@ -1918,7 +1933,7 @@ class WCISPlugin {
 	}
 	
 	function the_posts_handler($posts){
-	    if (is_search() && !$this->fulltext_disabled && $this->wcis_fulltext_ids != null){
+	    if (is_search() && !$this->fulltext_disabled && is_array($this->wcis_fulltext_ids)){
 			global $wp_query;
 			
 			$total_results = $this->wcis_total_results;	
