@@ -1,16 +1,16 @@
-=== Instant Search + for WooCommerce ===
+=== Instant Search + for WooCommerce Search ===
 Contributors: instantsearchplus
-Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search, search plugin, advance search, ajax search, brilliant search, ecommerce search, janothemes, janothemes search, products search, search, search widget, wp search
+Tags: search, autocomplete, suggest, woocommerce, instant search, autosuggest, better search, product search, custom search, relevant search, category search, typeahead, woocommerce search, woocommerce product search, did you mean, e-commerce, live search, wordpress ecommerce, highlight terms, search highlight, search product, predictive search, woocommerce plugin, best search, instant-search, search plugin, advance search, ajax search, brilliant search, ecommerce search, janothemes, janothemes search, products search, search widget, wp search, search by sku, sku, stock keeping unit, filters, facets, search filters, search by tag, search tag, search custom attribute, WooCommerce search plugin, woocommerce advanced search, best woocommerce search plugin, search by brand, woocomerce search filters
 Requires at least: 3.3
 Tested up to: 4.3
 Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Instant Search + for WooCommerce boosts conversion with fast, search as-you-type product suggestions. Find out what people are looking for on your site.
+WooCommerce Instant Search + boosts conversion with the fastest search-as-you-type product suggestions, relevant results, and automated search filters
 
 == Description ==
-**Note: InstandSearch+ is FREE for stores with up to 50 products, and offers affordable paid subscriptions for larger stores from $4.99 per month or the discounted price of $48 per year. 
+**Note: InstandSearch+ is FREE for stores with up to 50 products, and offers affordable paid subscriptions for larger stores from $4.99 per month. 
 There is 30 day trial period where you can experience all of InstantSearch+ premium features. 
 Full pricing information can be found at http://www.instantsearchplus.com/instantsearchplus-autocomplete-woocommerce**  
 

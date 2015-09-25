@@ -6,7 +6,7 @@
  * @copyright 2014 InstantSearchPlus
  *
  * @wordpress-plugin
- * Plugin Name:       Instant Search + for WooCommerce
+ * Plugin Name:       Instant Search + for WooCommerce Search
  * Plugin URI:        www.instantsearchplus.com 
  * Description:       Best search plugin for WooCommerce
  * Version:           1.3.4
