@@ -23,7 +23,7 @@ class WCISPlugin {
 // 	const SERVER_URL = 'http://0-2vk.acp-magento.appspot.com/';
 // 	const DASHBOARD_URL = self::SERVER_URL;
 	const ERROR_URL = 'http://0-1zarovv.acp-magento.appspot.com/plugin_test';
-	const VERSION = '1.3.3';
+	const VERSION = '1.3.4';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
