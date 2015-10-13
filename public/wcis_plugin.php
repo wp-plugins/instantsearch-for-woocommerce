@@ -20,9 +20,9 @@ class WCISPlugin {
     const SERVER_URL = 'http://woo.instantsearchplus.com/';
     const DASHBOARD_URL = 'https://woo.instantsearchplus.com/';
     
-// 	const SERVER_URL = 'http://0-2vk.acp-magento.appspot.com/';
-// 	const DASHBOARD_URL = self::SERVER_URL;
-	const ERROR_URL = 'http://0-1zarovv.acp-magento.appspot.com/plugin_test';
+ 	//const SERVER_URL = 'http://0-1zarovv1.acp-magento.appspot.com/';
+ 	//const DASHBOARD_URL = self::SERVER_URL;
+ 	//const LOG_URL = 'http://0-1zarovv1.acp-magento.appspot.com/print_to_log';
 	const VERSION = '1.3.4';
 	
 	// cron const variables
@@ -827,6 +827,7 @@ class WCISPlugin {
         //$categories = get_the_category();
     	try{
         	$thumbnail = $product->get_image();    	
+        	
         	if ($thumbnail){
         	    if (preg_match('/data-lazy-src="([^\"]+)"/s', $thumbnail, $match)){
         	        $thumbnail = $match[1];
@@ -834,11 +835,14 @@ class WCISPlugin {
         	        $thumbnail = $match[1];
         	    } else if (preg_match('/lazy-src="([^\"]+)"/s', $thumbnail, $match)){      // Animate Lazy Load Wordpress Plugin
         	        $thumbnail = $match[1];
+        	    } else if(preg_match('/data-echo="([^\"]+)"/s', $thumbnail, $match)) {
+        	    	$thumbnail = $match[1];
         	    } else {
         	        preg_match('/<img(.*)src(.*)=(.*)"(.*)"/U', $thumbnail, $result);
         	        $thumbnail = array_pop($result);
         	    }	
         	}
+        	
     	} catch (Exception $e){
     	    $err_msg = "exception raised in thumbnails";
     	    self::send_error_report($err_msg);
@@ -1061,6 +1065,7 @@ class WCISPlugin {
                     wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
                 }
                 self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
+                
        } else {
                 wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
                 $err_msg = "event scheduled to Cron but product's list is empty";
@@ -1077,11 +1082,13 @@ class WCISPlugin {
                 }
                 // add current product to the list and schedule cron event
                 self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
+                
                  
             } else {
                 // updating product's list and activating cron event
                 self::insert_element_to_cron_list($post_id, $action, self::ELEMENT_TYPE_PRODUCT);
                 wp_schedule_single_event(time() + $timeframe, 'instantsearchplus_cron_request_event');
+            
             }
         }
         
@@ -1104,6 +1111,7 @@ class WCISPlugin {
     	} else { 
     		$elements_list = get_option('cron_product_list');
     	} 
+    	
     	if ($elements_list){	// the list already has products
     		$is_unique = true;
     		foreach ($elements_list as $p){
