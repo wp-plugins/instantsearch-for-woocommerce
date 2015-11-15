@@ -20,14 +20,14 @@ class WCISPlugin {
     const SERVER_URL = 'http://woo.instantsearchplus.com/';
     const DASHBOARD_URL = 'https://woo.instantsearchplus.com/';
     
- 	//const SERVER_URL = 'http://0-1zarovv1.acp-magento.appspot.com/';
- 	//const DASHBOARD_URL = self::SERVER_URL;
- 	//const LOG_URL = 'http://0-1zarovv1.acp-magento.appspot.com/print_to_log';
-	const VERSION = '1.3.4';
+//  	const SERVER_URL = 'http://0-1vk.acp-magento.appspot.com/';
+
+	const VERSION = '1.3.7';
 	
 	// cron const variables
 	const CRON_THRESHOLD_TIME 				 = 1200; 	// -> 20 minutes
 	const CRON_EXECUTION_TIME 				 = 900; 	// -> 15 minutes
+	const CRON_EXECUTION_TIME_RETRY			 = 600; 	// -> 10 minutes
 	const SINGLES_TO_BATCH_THRESHOLD		 = 10;		// if more then 10 products send as batch
 	const CRON_SEND_CATEGORIES_TIME_INTERVAL = 30;      // -> 30 secunds
 	
@@ -110,6 +110,8 @@ class WCISPlugin {
         // Load public-facing style sheet and JavaScript.
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+        
+        add_filter('script_loader_tag', array( $this, 'add_async_defer_attributes'), 10, 2);
             
         add_action('parse_request', array($this, 'process_instantsearchplus_request'));
         add_filter('query_vars', array($this, 'filter_instantsearchplus_request'));   
@@ -869,7 +871,44 @@ class WCISPlugin {
     	    $product_tags[] = $tag->name;
     	}
     	
+    	$product_brands = array();
+    	if (taxonomy_exists('product_brand')){
+        	foreach (wp_get_post_terms($post_id, 'product_brand') as $brand){
+        	    $product_brands[] = $brand->name;
+        	}
+    	}
     	
+    	$taxonomies = array();
+    	try{
+        	$all_taxonomies = get_option('wcis_taxonomies');
+        	if (is_array($all_taxonomies)){
+        	    foreach ($all_taxonomies as $taxonomy){
+        	        if (taxonomy_exists($taxonomy) && !array_key_exists($taxonomy, $taxonomies)){
+        	            foreach (wp_get_post_terms($post_id, $taxonomy) as $taxonomy_value){
+        	                if (!array_key_exists($taxonomy, $taxonomies)){
+        	                    $taxonomies[$taxonomy] = array();
+        	                }
+        	                $taxonomies[$taxonomy][] = $taxonomy_value->name;
+        	            }
+        	        }
+        	    }
+        	}
+    	} catch (Exception $e){}
+    	
+    	$acf_fields = array();
+    	try{
+    	    if (class_exists('acf') && function_exists('get_field')){
+    	        $all_acf_fields = get_option('wcis_acf_fields');
+    	        if (is_array($all_acf_fields)){
+    	            foreach ($all_acf_fields as $acf_field_name){
+    	                $acf_field_value = get_field($acf_field_name, $post_id);
+    	                if ($acf_field_value){
+        	                $acf_fields[$acf_field_name] = $acf_field_value;
+    	                }
+    	            }
+    	        }
+    	    }
+    	} catch (Exception $e){}
     	
     	$send_product = array('product_id' => $product->id,
     			'currency' => get_woocommerce_currency(),
@@ -885,6 +924,10 @@ class WCISPlugin {
     	        'tag' => $product_tags,
     			'store_id'=>get_current_blog_id(),
     			'identifier' => (string)$product->id,
+    	        
+    	        'product_brand' => $product_brands,
+    	        'taxonomies' => $taxonomies,
+    	        'acf_fields' => $acf_fields,
     	
     			'sellable' => $product->is_purchasable(),
     			'visibility' =>$product->is_visible(),
@@ -933,13 +976,19 @@ class WCISPlugin {
     	    try{
     	        if ( version_compare( WOOCOMMERCE_VERSION, '2.2', '>=' ) ){
     	            if (function_exists('wc_get_product')){
-        	            $send_product['visibility'] = wc_get_product($product->id)->is_visible();
-        	            $send_product['product_type'] = wc_get_product($product->id)->product_type;
+    	                $original_product = wc_get_product($product->id);
+    	                if (is_object($original_product)){
+            	            $send_product['visibility'] = $original_product->is_visible();
+            	            $send_product['product_type'] = $original_product->product_type;
+    	                }
     	            }
     	        } else {
     	            if(function_exists('get_product')){
-        	            $send_product['visibility'] = get_product($product->id)->is_visible();
-        	            $send_product['product_type'] = get_product($product->id)->product_type;
+    	                $original_product = get_product($product->id);
+    	                if (is_object($original_product)){
+            	            $send_product['visibility'] = $original_product->is_visible();
+            	            $send_product['product_type'] = $original_product->product_type;
+    	                }
     	            }
     	        }
     	    } catch (Exception $e){}
@@ -1476,6 +1525,12 @@ class WCISPlugin {
         }
 	}
 	
+	function add_async_defer_attributes($tag, $handle){
+	    if ( $handle !== $this->plugin_slug . '-inject3' && $handle !== $this->plugin_slug . '-fulltext'){
+	        return $tag;
+	    }
+	    return str_replace( ' src', ' data-cfasync="false" async src', $tag );
+	}
 	
 	function filter_instantsearchplus_request($vars){
 		$vars[] = 'instantsearchplus';
@@ -1614,8 +1669,64 @@ class WCISPlugin {
 			    delete_option('cron_category_list');
 			    delete_option('cron_in_progress');
 			    wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
-			} elseif ($req->query_vars['instantsearchplus'] == 'tmp'){    
-			} 
+			} elseif ($req->query_vars['instantsearchplus'] == 'add_taxonomy'){
+			    if (array_key_exists('instantsearchplus_second_parameter', $req->query_vars) && 
+			             $req->query_vars['instantsearchplus_second_parameter'] == get_option ('authentication_key')){
+    			    $taxonomy = $req->query_vars['instantsearchplus_parameter'];
+    			    $all_taxonomies = get_option('wcis_taxonomies');
+    			    if (!is_array($all_taxonomies)){
+    			        $all_taxonomies = array();
+    			    }
+    			    if (!in_array($taxonomy, $all_taxonomies)){
+    			        $all_taxonomies[] = $taxonomy;
+    			        update_option('wcis_taxonomies', $all_taxonomies);
+    			    }
+			    } else {
+			        print_r('failed to add taxonomy!');
+			    }
+			    exit();
+			} elseif ($req->query_vars['instantsearchplus'] == 'remove_taxonomy'){  
+			    if (array_key_exists('instantsearchplus_second_parameter', $req->query_vars) &&
+			             $req->query_vars['instantsearchplus_second_parameter'] == get_option ('authentication_key')){ 
+			        delete_option('wcis_taxonomies');
+			    } else {
+			        print_r('failed to remove taxonomy!');
+			    }
+			    exit();
+			} elseif ($req->query_vars['instantsearchplus'] == 'get_taxonomy'){   
+			    print_r(get_option('wcis_taxonomies'));
+			    exit();
+			    
+			} elseif ($req->query_vars['instantsearchplus'] == 'add_acf_field'){
+			    if (array_key_exists('instantsearchplus_second_parameter', $req->query_vars) &&
+			             $req->query_vars['instantsearchplus_second_parameter'] == get_option ('authentication_key')){
+			        $acf_field = $req->query_vars['instantsearchplus_parameter'];
+			        $wcis_acf_fields = get_option('wcis_acf_fields');
+			        if (!is_array($wcis_acf_fields)){
+			            $wcis_acf_fields = array();
+			        }
+			        if (!in_array($acf_field, $wcis_acf_fields)){
+			            $wcis_acf_fields[] = $acf_field;
+			            update_option('wcis_acf_fields', $wcis_acf_fields);
+			        }
+			    } else {
+			        print_r('failed to add advanced custom field!');
+			    }
+			    exit();
+		    } elseif ($req->query_vars['instantsearchplus'] == 'remove_acf_field'){
+		        if (array_key_exists('instantsearchplus_second_parameter', $req->query_vars) &&
+			             $req->query_vars['instantsearchplus_second_parameter'] == get_option ('authentication_key')){
+		            delete_option('wcis_acf_fields');
+		        } else {
+		            print_r('failed to remove advanced custom field!');
+		        }
+		        exit();
+	        } elseif ($req->query_vars['instantsearchplus'] == 'get_acf_field'){
+	            print_r(update_option('wcis_acf_fields'));
+	            exit();
+			} elseif ($req->query_vars['instantsearchplus'] == 'tmp'){
+			    exit();
+			}
 		}
 	}
 	
@@ -1625,10 +1736,11 @@ class WCISPlugin {
 	}
 	
 	function execute_update_request(){	   
-	    if (get_option('cron_in_progress')){
+	    if (get_option('cron_in_progress') && (time() - intval(get_option('cron_in_progress')) < self::CRON_EXECUTION_TIME_RETRY)){
+			// locked less than 10 minutes
 	        return;
 	    }
-		update_option('cron_in_progress', True);
+		update_option('cron_in_progress', time());
 		try {
     		$products_list = get_option('cron_product_list');
     		$categorys_list = get_option('cron_category_list');
@@ -1636,7 +1748,10 @@ class WCISPlugin {
     			wp_clear_scheduled_hook('instantsearchplus_cron_request_event');
     			delete_option('cron_in_progress');
     			return;
-    		} 
+    		}
+    		// schedule retry in 10+1 minutes! (if this task will clean the products & categories lists than the next task won't schedule new CRON)
+    		wp_schedule_single_event(time() + self::CRON_EXECUTION_TIME_RETRY + 60, 'instantsearchplus_cron_request_event');
+    		
     		if ($products_list){
         		if (count($products_list) <= self::SINGLES_TO_BATCH_THRESHOLD){
         			foreach ($products_list as $key => $product_node){
